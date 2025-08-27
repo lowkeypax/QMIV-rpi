@@ -124,6 +124,8 @@ std::string xMiscUtilsCORE::formatCompileTimeSetup()
     Str += fmt::format("SIMD_CAN_USE_SSE       = {:d}\n", X_SIMD_CAN_USE_SSE);
     Str += fmt::format("SIMD_CAN_USE_AVX       = {:d}\n", X_SIMD_CAN_USE_AVX);
     Str += fmt::format("SIMD_CAN_USE_AVX512    = {:d}\n", X_SIMD_CAN_USE_AVX512);
+    Str += fmt::format("SIMD_CAN_USE_NEON      = {:d}\n", X_SIMD_CAN_USE_NEON);
+    
   }
   Str += fmt::format("TSC_IMPLEMENTATION     = {}\n", X_TSC_IMPLEMENTATION);
   return Str;

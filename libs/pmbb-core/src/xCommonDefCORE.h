@@ -30,7 +30,7 @@ namespace PMBB_NAMESPACE { using namespace PMBB_BASE; }
 #include <x86intrin.h>
 #endif
 
-#define USE_SIMD  1 // use SIMD
+#define USE_SIMD 1
 
 namespace PMBB_NAMESPACE {
 
@@ -85,6 +85,22 @@ namespace PMBB_NAMESPACE {
 #define X_SIMD_HAS_AVX512 0
 #endif
 #define X_SIMD_CAN_USE_AVX512 (X_SIMD_HAS_AVX512 && USE_SIMD)
+
+//---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+// SIMD section - NEON (corresponding to ARMv8)
+//---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+//neon
+#if defined (__ARM_NEON)
+#define X_SIMD_HAS_NEON 1
+#else
+#define X_SIMD_HAS_NEON 0
+#endif
+#if (X_SIMD_HAS_NEON && USE_SIMD)
+  #define X_SIMD_CAN_USE_NEON 1
+#endif
+
+
 
 //===============================================================================================================================================================================================================
 // Basic ops

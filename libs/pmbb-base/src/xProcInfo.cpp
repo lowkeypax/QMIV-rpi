@@ -7,28 +7,33 @@
 #include "xString.h"
 #include <cstring>
 
-#if X_ARCHITECTURE_AMD64 
-  #if defined(X_PMBB_COMPILER_MSVC)
-    #include <intrin.h>
-  #elif (defined(X_PMBB_COMPILER_GCC) || defined(X_PMBB_COMPILER_CLANG))
+#if defined(X_PMBB_COMPILER_MSVC)
+  #include <intrin.h>
+#elif (defined(X_PMBB_COMPILER_GCC) || defined(X_PMBB_COMPILER_CLANG))
+  #if X_ARCHITECTURE_AMD64
     #include <cpuid.h>
+  #endif
+  #if X_ARCHITECTURE_ARM64
+    #include <sys/auxv.h>
+    #include <asm/hwcap.h>
+  #endif
   #else
     #error "Unknown compiler"
-  #endif
+#endif
 
-  #if defined(X_PMBB_OPERATING_SYSTEM_WINDOWS)
-    #define WIN32_LEAN_AND_MEAN
-    #include <windows.h>
-    #undef WIN32_LEAN_AND_MEAN
-  #elif __has_include(<unistd.h>)
-    #define X_PMBB_SYSTEM_UNISTD 1
-    #include <unistd.h>
-  #endif
+#if defined(X_PMBB_OPERATING_SYSTEM_WINDOWS)
+  #define WIN32_LEAN_AND_MEAN
+  #include <windows.h>
+  #undef WIN32_LEAN_AND_MEAN
+#elif __has_include(<unistd.h>)
+  #define X_PMBB_SYSTEM_UNISTD 1
+  #include <unistd.h>
+#endif
 
-  //=============================================================================================================================================================================
-  // Helper functions - CPU
-  //=============================================================================================================================================================================
-
+//=============================================================================================================================================================================
+// Helper functions - CPU
+//=============================================================================================================================================================================
+#if X_ARCHITECTURE_AMD64
   namespace {
 
   static constexpr uint32_t c_RegEAX = 0;
@@ -60,207 +65,208 @@
     #error "Unknown or unsuported compiler"
   #endif
   }
+} //end of namespace
+#endif
 
-  } //end of namespace
+//=============================================================================================================================================================================
+// Helper functions - memory
+//=============================================================================================================================================================================
 
-  //=============================================================================================================================================================================
-  // Helper functions - memory
-  //=============================================================================================================================================================================
+namespace {
 
-  namespace {
+int32_t xDetectCacheLineSize()
+{
+#if defined(X_PMBB_OPERATING_SYSTEM_WINDOWS)
+  DWORD bufferSize = 0;
+  SYSTEM_LOGICAL_PROCESSOR_INFORMATION* buffer = 0;
 
-  int32_t xDetectCacheLineSize()
+  GetLogicalProcessorInformation(0, &bufferSize);
+  buffer = (SYSTEM_LOGICAL_PROCESSOR_INFORMATION*)malloc(bufferSize);
+  GetLogicalProcessorInformation(&buffer[0], &bufferSize);
+
+  int32_t LineSize = 0;
+  for(int32_t i = 0; i != bufferSize / sizeof(SYSTEM_LOGICAL_PROCESSOR_INFORMATION); ++i)
   {
-  #if defined(X_PMBB_OPERATING_SYSTEM_WINDOWS)
-    DWORD bufferSize = 0;
-    SYSTEM_LOGICAL_PROCESSOR_INFORMATION* buffer = 0;
-
-    GetLogicalProcessorInformation(0, &bufferSize);
-    buffer = (SYSTEM_LOGICAL_PROCESSOR_INFORMATION*)malloc(bufferSize);
-    GetLogicalProcessorInformation(&buffer[0], &bufferSize);
-
-    int32_t LineSize = 0;
-    for(int32_t i = 0; i != bufferSize / sizeof(SYSTEM_LOGICAL_PROCESSOR_INFORMATION); ++i)
+    if(buffer[i].Relationship == RelationCache && buffer[i].Cache.Level == 1)
     {
-      if(buffer[i].Relationship == RelationCache && buffer[i].Cache.Level == 1)
-      {
-        LineSize = buffer[i].Cache.LineSize;
-        break;
-      }
+      LineSize = buffer[i].Cache.LineSize;
+      break;
     }
-    free(buffer);
-    return LineSize;
-  #elif defined(X_PMBB_OPERATING_SYSTEM_LINUX)
-    FILE* File = 0;
-    File = fopen("/sys/devices/system/cpu/cpu0/cache/index0/coherency_line_size", "r");
-    int LineSize = 0;
-    if(File != nullptr)
-    {
-      int Result = fscanf(File, "%d", &LineSize);
-      fclose(File);
-      if(Result != 1) { return 0; }
-    }
-    return LineSize;
-  #endif
   }
-
-  int32_t xDetectMemoryPageSize()
+  free(buffer);
+  return LineSize;
+#elif defined(X_PMBB_OPERATING_SYSTEM_LINUX)
+  FILE* File = 0;
+  File = fopen("/sys/devices/system/cpu/cpu0/cache/index0/coherency_line_size", "r");
+  int LineSize = 0;
+  if(File != nullptr)
   {
-    int32_t PageSize = NOT_VALID;
-  #if defined(X_PMBB_OPERATING_SYSTEM_WINDOWS)
-    SYSTEM_INFO SysInfo;
-    GetSystemInfo(&SysInfo);
-    PageSize = SysInfo.dwPageSize;
-  #elif defined(X_PMBB_SYSTEM_UNISTD)
-    PageSize = sysconf(_SC_PAGE_SIZE);
-  #else
-    #error "Unknown system"
-  #endif
-    return PageSize;
+    int Result = fscanf(File, "%d", &LineSize);
+    fclose(File);
+    if(Result != 1) { return 0; }
   }
+  return LineSize;
+#endif
+}
 
-  } //end of namespace
+int32_t xDetectMemoryPageSize()
+{
+  int32_t PageSize = NOT_VALID;
+#if defined(X_PMBB_OPERATING_SYSTEM_WINDOWS)
+  SYSTEM_INFO SysInfo;
+  GetSystemInfo(&SysInfo);
+  PageSize = SysInfo.dwPageSize;
+#elif defined(X_PMBB_SYSTEM_UNISTD)
+  PageSize = sysconf(_SC_PAGE_SIZE);
+#else
+  #error "Unknown system"
+#endif
+  return PageSize;
+}
 
-  namespace PMBB_BASE {
+} //end of namespace
 
-  //=============================================================================================================================================================================
-  // xProcInfo::xExt
-  //=============================================================================================================================================================================
-  std::string xProcInfo::xExts::eExtToName(eExt Ext)
+namespace PMBB_BASE {
+
+//=============================================================================================================================================================================
+// xProcInfo::xExt
+//=============================================================================================================================================================================
+std::string xProcInfo::xExts::eExtToName(eExt Ext)
+{
+  std::string Result;
+
+  switch(Ext)
   {
-    std::string Result;
+    case eExt::FPU                 : Result = "FPU                "; break;
+    case eExt::CMPXCHG8B           : Result = "CMPXCHG8B          "; break;
+    case eExt::MMX                 : Result = "MMX                "; break;
+    case eExt::CMOV                : Result = "CMOV               "; break;
+    case eExt::PSE                 : Result = "PSE                "; break;
+    case eExt::TSC                 : Result = "TSC                "; break;
+    case eExt::PAE                 : Result = "PAE                "; break;
+    case eExt::SEP                 : Result = "SEP                "; break;
+    case eExt::PSE36               : Result = "PSE36              "; break;
+    case eExt::SSE1                : Result = "SSE1               "; break;
+    case eExt::FXRS                : Result = "FXRS               "; break;
+    case eExt::SSE2                : Result = "SSE2               "; break;
+    case eExt::CLFLUSH             : Result = "CLFLUSH            "; break;
+    case eExt::HT                  : Result = "HT                 "; break;
+    case eExt::SSE3                : Result = "SSE3               "; break;
+    case eExt::CMPXCHG16B          : Result = "CMPXCHG16B         "; break;
+    case eExt::SSSE3               : Result = "SSSE3              "; break;
+    case eExt::LAHF_SAHF           : Result = "LAHF_SAHF          "; break;
+    case eExt::SSE4_1              : Result = "SSE4_1             "; break;
+    case eExt::SSE4_2              : Result = "SSE4_2             "; break;
+    case eExt::POPCNT              : Result = "POPCNT             "; break;
+    case eExt::AES                 : Result = "AES                "; break;
+    case eExt::CLMUL               : Result = "CLMUL              "; break;
+    case eExt::AVX1                : Result = "AVX1               "; break;
+    case eExt::FP16C               : Result = "FP16C              "; break;
+    case eExt::RDRAND              : Result = "RDRAND             "; break;
+    case eExt::AVX2                : Result = "AVX2               "; break;
+    case eExt::LZCNT               : Result = "LZCNT              "; break;
+    case eExt::MOVBE               : Result = "MOVBE              "; break;
+    case eExt::ABM                 : Result = "ABM                "; break;
+    case eExt::BMI1                : Result = "BMI1               "; break;
+    case eExt::BMI2                : Result = "BMI2               "; break;
+    case eExt::FMA3                : Result = "FMA3               "; break;
+    case eExt::RTM                 : Result = "RTM                "; break;
+    case eExt::HLE                 : Result = "HLE                "; break;
+    case eExt::TSX                 : Result = "TSX                "; break;
+    case eExt::INVPCID             : Result = "INVPCID            "; break;
+    case eExt::ADX                 : Result = "ADX                "; break;
+    case eExt::RDSEED              : Result = "RDSEED             "; break;
+    case eExt::PREFETCHW           : Result = "PREFETCHW          "; break;
+    case eExt::MPX                 : Result = "MPX                "; break;
+    case eExt::SGX                 : Result = "SGX                "; break;
+    case eExt::SHA                 : Result = "SHA                "; break;
+    case eExt::AVX512F             : Result = "AVX512F            "; break;
+    case eExt::AVX512VL            : Result = "AVX512VL           "; break;
+    case eExt::AVX512BW            : Result = "AVX512BW           "; break;
+    case eExt::AVX512DQ            : Result = "AVX512DQ           "; break;
+    case eExt::AVX512CD            : Result = "AVX512CD           "; break;
+    case eExt::AVX512ER            : Result = "AVX512ER           "; break;
+    case eExt::AVX512PF            : Result = "AVX512PF           "; break;
+    case eExt::UMIP                : Result = "UMIP               "; break;
+    case eExt::AVX512VMBI          : Result = "AVX512VMBI         "; break;
+    case eExt::AVX512IFMA          : Result = "AVX512IFMA         "; break;
+    case eExt::AVX512_4VNNIW       : Result = "AVX512_4VNNIW      "; break;
+    case eExt::AVX512_4FMAPS       : Result = "AVX512_4FMAPS      "; break;
+    case eExt::CLWB                : Result = "CLWB               "; break;
+    case eExt::RDPID               : Result = "RDPID              "; break;
+    case eExt::AVX512_VNNI         : Result = "AVX512_VNNI        "; break;
+    case eExt::AVX512_VBMI2        : Result = "AVX512_VBMI2       "; break;
+    case eExt::AVX512_BITALG       : Result = "AVX512_BITALG      "; break;
+    case eExt::AVX512_VPOPCNTDQ    : Result = "AVX512_VPOPCNTDQ   "; break;
+    case eExt::VPCLMULQDQ          : Result = "VPCLMULQDQ         "; break;
+    case eExt::VAES                : Result = "VAES               "; break;
+    case eExt::GFNI                : Result = "GFNI               "; break;
+    case eExt::AVX512_VP2INTERSECT : Result = "AVX512_VP2INTERSECT"; break;
+    case eExt::AVX512_BF16         : Result = "AVX512_BF16        "; break;
+    case eExt::AVX512_FP16         : Result = "AVX512_FP16        "; break;
+    case eExt::AMX_BF16            : Result = "AMX_BF16           "; break;
+    case eExt::AMX_TILE            : Result = "AMX_TILE           "; break;
+    case eExt::AMX_INT8            : Result = "AMX_INT8           "; break;
+    case eExt::HYBRID              : Result = "HYBRID             "; break;
 
-    switch(Ext)
-    {
-      case eExt::FPU                 : Result = "FPU                "; break;
-      case eExt::CMPXCHG8B           : Result = "CMPXCHG8B          "; break;
-      case eExt::MMX                 : Result = "MMX                "; break;
-      case eExt::CMOV                : Result = "CMOV               "; break;
-      case eExt::PSE                 : Result = "PSE                "; break;
-      case eExt::TSC                 : Result = "TSC                "; break;
-      case eExt::PAE                 : Result = "PAE                "; break;
-      case eExt::SEP                 : Result = "SEP                "; break;
-      case eExt::PSE36               : Result = "PSE36              "; break;
-      case eExt::SSE1                : Result = "SSE1               "; break;
-      case eExt::FXRS                : Result = "FXRS               "; break;
-      case eExt::SSE2                : Result = "SSE2               "; break;
-      case eExt::CLFLUSH             : Result = "CLFLUSH            "; break;
-      case eExt::HT                  : Result = "HT                 "; break;
-      case eExt::SSE3                : Result = "SSE3               "; break;
-      case eExt::CMPXCHG16B          : Result = "CMPXCHG16B         "; break;
-      case eExt::SSSE3               : Result = "SSSE3              "; break;
-      case eExt::LAHF_SAHF           : Result = "LAHF_SAHF          "; break;
-      case eExt::SSE4_1              : Result = "SSE4_1             "; break;
-      case eExt::SSE4_2              : Result = "SSE4_2             "; break;
-      case eExt::POPCNT              : Result = "POPCNT             "; break;
-      case eExt::AES                 : Result = "AES                "; break;
-      case eExt::CLMUL               : Result = "CLMUL              "; break;
-      case eExt::AVX1                : Result = "AVX1               "; break;
-      case eExt::FP16C               : Result = "FP16C              "; break;
-      case eExt::RDRAND              : Result = "RDRAND             "; break;
-      case eExt::AVX2                : Result = "AVX2               "; break;
-      case eExt::LZCNT               : Result = "LZCNT              "; break;
-      case eExt::MOVBE               : Result = "MOVBE              "; break;
-      case eExt::ABM                 : Result = "ABM                "; break;
-      case eExt::BMI1                : Result = "BMI1               "; break;
-      case eExt::BMI2                : Result = "BMI2               "; break;
-      case eExt::FMA3                : Result = "FMA3               "; break;
-      case eExt::RTM                 : Result = "RTM                "; break;
-      case eExt::HLE                 : Result = "HLE                "; break;
-      case eExt::TSX                 : Result = "TSX                "; break;
-      case eExt::INVPCID             : Result = "INVPCID            "; break;
-      case eExt::ADX                 : Result = "ADX                "; break;
-      case eExt::RDSEED              : Result = "RDSEED             "; break;
-      case eExt::PREFETCHW           : Result = "PREFETCHW          "; break;
-      case eExt::MPX                 : Result = "MPX                "; break;
-      case eExt::SGX                 : Result = "SGX                "; break;
-      case eExt::SHA                 : Result = "SHA                "; break;
-      case eExt::AVX512F             : Result = "AVX512F            "; break;
-      case eExt::AVX512VL            : Result = "AVX512VL           "; break;
-      case eExt::AVX512BW            : Result = "AVX512BW           "; break;
-      case eExt::AVX512DQ            : Result = "AVX512DQ           "; break;
-      case eExt::AVX512CD            : Result = "AVX512CD           "; break;
-      case eExt::AVX512ER            : Result = "AVX512ER           "; break;
-      case eExt::AVX512PF            : Result = "AVX512PF           "; break;
-      case eExt::UMIP                : Result = "UMIP               "; break;
-      case eExt::AVX512VMBI          : Result = "AVX512VMBI         "; break;
-      case eExt::AVX512IFMA          : Result = "AVX512IFMA         "; break;
-      case eExt::AVX512_4VNNIW       : Result = "AVX512_4VNNIW      "; break;
-      case eExt::AVX512_4FMAPS       : Result = "AVX512_4FMAPS      "; break;
-      case eExt::CLWB                : Result = "CLWB               "; break;
-      case eExt::RDPID               : Result = "RDPID              "; break;
-      case eExt::AVX512_VNNI         : Result = "AVX512_VNNI        "; break;
-      case eExt::AVX512_VBMI2        : Result = "AVX512_VBMI2       "; break;
-      case eExt::AVX512_BITALG       : Result = "AVX512_BITALG      "; break;
-      case eExt::AVX512_VPOPCNTDQ    : Result = "AVX512_VPOPCNTDQ   "; break;
-      case eExt::VPCLMULQDQ          : Result = "VPCLMULQDQ         "; break;
-      case eExt::VAES                : Result = "VAES               "; break;
-      case eExt::GFNI                : Result = "GFNI               "; break;
-      case eExt::AVX512_VP2INTERSECT : Result = "AVX512_VP2INTERSECT"; break;
-      case eExt::AVX512_BF16         : Result = "AVX512_BF16        "; break;
-      case eExt::AVX512_FP16         : Result = "AVX512_FP16        "; break;
-      case eExt::AMX_BF16            : Result = "AMX_BF16           "; break;
-      case eExt::AMX_TILE            : Result = "AMX_TILE           "; break;
-      case eExt::AMX_INT8            : Result = "AMX_INT8           "; break;
-      case eExt::HYBRID              : Result = "HYBRID             "; break;
+    case eExt::MMX_3DNow           : Result = "MMX_3DNow          "; break;
+    case eExt::MMX_3DNowExt        : Result = "MMX_3DNowExt       "; break;
+    case eExt::SSE4_A              : Result = "SSE4_A             "; break;
+    case eExt::SSE_XOP             : Result = "SSE_XOP            "; break;
+    case eExt::FMA4                : Result = "FMA4               "; break;
+    case eExt::TBM                 : Result = "TBM                "; break;
 
-      case eExt::MMX_3DNow           : Result = "MMX_3DNow          "; break;
-      case eExt::MMX_3DNowExt        : Result = "MMX_3DNowExt       "; break;
-      case eExt::SSE4_A              : Result = "SSE4_A             "; break;
-      case eExt::SSE_XOP             : Result = "SSE_XOP            "; break;
-      case eExt::FMA4                : Result = "FMA4               "; break;
-      case eExt::TBM                 : Result = "TBM                "; break;
-
-      default                        : Result = "unknown            "; break;
-    }
-
-    const auto End = Result.find_first_of(' ');
-    return Result.substr(0, End);
+    default                        : Result = "unknown            "; break;
   }
 
-  //=============================================================================================================================================================================
-  // xProcInfo
-  //=============================================================================================================================================================================
-  void xProcInfo::detectSysInfo()
+  const auto End = Result.find_first_of(' ');
+  return Result.substr(0, End);
+}
+
+//=============================================================================================================================================================================
+// xProcInfo
+//=============================================================================================================================================================================
+void xProcInfo::detectSysInfo()
+{
+  xDetectExts();
+  xDetectMem ();
+}
+std::string xProcInfo::formatSysInfo()
+{
+  std::string Message; Message.reserve(4096);
+  if(!m_ExtsChecked) { xDetectExts(); }
+  Message += xFormatProcExts(m_Exts) + "\n";
+  
+  Message += "Detected OS features:\n";
+  Message += fmt::format("  AVX-instructions-allowed = {}\n\n", (int)m_OSAVX);
+
+  if(!m_MemChecked) { xDetectMem(); }
+  Message += xFormatMemInfo(m_Mem);
+
+  return Message;
+}
+std::string xProcInfo::xFormatProcExts(const xExts& Exts)
+{
+  std::string Message = "";
+  //available
+  Message += "Detected CPU features:\n";
+  Message += "  Available-extensions-list = ";
+  for(int32_t ExtIdx = 0; ExtIdx<(int32_t)eExt::NUM_OF_EXTS; ExtIdx++)
   {
-    xDetectExts();
-    xDetectMem ();
+    if(Exts.hasExt((eExt)ExtIdx)) { Message += xExts::eExtToName((eExt)ExtIdx) + " "; }
   }
-  std::string xProcInfo::formatSysInfo()
-  {
-    std::string Message; Message.reserve(4096);
-    if(!m_ExtsChecked) { xDetectExts(); }
-    Message += xFormatProcExts(m_Exts) + "\n";
-    
-    Message += "Detected OS features:\n";
-    Message += fmt::format("  AVX-instructions-allowed = {}\n\n", (int)m_OSAVX);
-
-    if(!m_MemChecked) { xDetectMem(); }
-    Message += xFormatMemInfo(m_Mem);
-
-    return Message;
-  }
-  std::string xProcInfo::xFormatProcExts(const xExts& Exts)
-  {
-    std::string Message = "";
-    //available
-    Message += "Detected CPU features:\n";
-    Message += "  Available-extensions-list = ";
-    for(int32_t ExtIdx = 0; ExtIdx<(int32_t)eExt::NUM_OF_EXTS; ExtIdx++)
-    {
-      if(Exts.hasExt((eExt)ExtIdx)) { Message += xExts::eExtToName((eExt)ExtIdx) + " "; }
-    }
-    Message += "\n";
-    return Message;
-  }
-  std::string xProcInfo::xFormatMemInfo(const xMem& Mem)
-  {
-    std::string Message = "";
-    Message += "Detected memory features:\n";
-    Message += "  CacheLineSize  = " + std::to_string(Mem.getCacheLineSize ()) + "\n";
-    Message += "  MemoryPageSize = " + std::to_string(Mem.getMemoryPageSize()) + "\n";
-    return Message;
-  }
+  Message += "\n";
+  return Message;
+}
+std::string xProcInfo::xFormatMemInfo(const xMem& Mem)
+{
+  std::string Message = "";
+  Message += "Detected memory features:\n";
+  Message += "  CacheLineSize  = " + std::to_string(Mem.getCacheLineSize ()) + "\n";
+  Message += "  MemoryPageSize = " + std::to_string(Mem.getMemoryPageSize()) + "\n";
+  return Message;
+}
+#if X_ARCHITECTURE_AMD64
   xProcInfo::eMFL xProcInfo::determineMicroArchFeatureLevel()
   {
     //x86-64-v4 : AVX512F, AVX512BW, AVX512CD, AVX512DQ, AVX512VL
@@ -293,31 +299,50 @@
           Mfl == eMFL::AMD64v4   ? "x86-64-v4" :
                                     "INVALID";
   }
+#endif
   void xProcInfo::xDetectExts()
   {
-    //http://www.sandpile.org/x86/cpuid.htm
-    //StandardLevel = 0
-    uint32_t CPUInfo[c_RegNUM]; //[0]=EAX, [1]=EBX, [2]=ECX, [3]=EDX  
-    xCPUID(CPUInfo, 0);
-    uint32_t HighestFunctionSupported = CPUInfo[0];
-    memcpy(m_VendorID, &CPUInfo[1], 3*sizeof(int32_t));
+    #if X_ARCHITECTURE_AMD64
+      //http://www.sandpile.org/x86/cpuid.htm
+      //StandardLevel = 0
+      uint32_t CPUInfo[c_RegNUM]; //[0]=EAX, [1]=EBX, [2]=ECX, [3]=EDX  
+      xCPUID(CPUInfo, 0);
+      uint32_t HighestFunctionSupported = CPUInfo[0];
+      memcpy(m_VendorID, &CPUInfo[1], 3*sizeof(int32_t));
 
-    m_Exts  = xDetectProcExts(HighestFunctionSupported);
-    m_OSAVX = xDetectOSAVX();
+      m_Exts  = xDetectProcExts(HighestFunctionSupported);
+      m_OSAVX = xDetectOSAVX();
+    #endif
+    #if X_ARCHITECTURE_ARM64
+      printf("DETECT FUN\n");
+      m_Exts  = xDetectProcExts();
+    #endif
     m_ExtsChecked = true;
   }
-  void xProcInfo::xDetectMem()
-  {
-    int32_t CacheLineSize  = xDetectCacheLineSize();
-    int32_t MemoryPageSize = xDetectMemoryPageSize();
-    m_Mem.setCacheLineSize (CacheLineSize );
-    m_Mem.setMemoryPageSize(MemoryPageSize);
-    m_MemChecked = true;
-  }
-  xProcInfo::xExts xProcInfo::xDetectProcExts(uint32_t HighestFunctionSupported)
-  {
-    xExts Exts;
 
+void xProcInfo::xDetectMem()
+{
+  int32_t CacheLineSize  = xDetectCacheLineSize();
+  int32_t MemoryPageSize = xDetectMemoryPageSize();
+  m_Mem.setCacheLineSize (CacheLineSize );
+  m_Mem.setMemoryPageSize(MemoryPageSize);
+  m_MemChecked = true;
+}
+
+xProcInfo::xExts xProcInfo::xDetectProcExts(uint32_t HighestFunctionSupported)
+{
+  xExts Exts;
+
+
+  #if X_ARCHITECTURE_ARM64
+  unsigned long hwcaps = getauxval(AT_HWCAP);
+      
+      if (hwcaps & HWCAP_ASIMD) {
+        {printf("ASIMD (NEON) is supported.\n");
+        Exts.setExt(eExt::NEON , (hwcaps & HWCAP_ASIMD));}
+    }
+  #endif
+  #if X_ARCHITECTURE_AMD64
     // http://www.sandpile.org/x86/cpuid.htm
     uint32_t CPUInfo[c_RegNUM] = { 0 }; //[0] =EAX, [1]=EBX, [2]=ECX, [3]=EDX  
 
@@ -498,17 +523,16 @@
       Exts.setExt(eExt::MMX_3DNow    , (CPUInfo[c_RegEDX] & (1<<31)) != 0);
       Exts.setExt(eExt::MMX_3DNowExt , (CPUInfo[c_RegEDX] & (1<<30)) != 0);
     }
+  #endif
+  return Exts;
+}
 
-    return Exts;
-  }
-
+#if X_ARCHITECTURE_AMD64
   bool xProcInfo::xDetectOSAVX()
   { 
     return (xXGETBV(0) & 6) == 6; //AVX enabled in O.S.
   }
+#endif
+//=============================================================================================================================================================================
 
-  //=============================================================================================================================================================================
-
-  } //end of namespace PMBB
-
-#endif //!X_ARCHITECHTURE_AMD64
+} //end of namespace PMBB

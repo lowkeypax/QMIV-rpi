@@ -136,6 +136,10 @@ public:
     //Piledriver           
     TBM               ,
 
+
+    //ARM
+    NEON              , //SIMDAdv
+
     //TYPE
     NUM_OF_EXTS
   };
@@ -153,11 +157,16 @@ public:
     inline bool hasAVX1() const { return hasSSEx() && hasExt(eExt::AVX1); }
     inline bool hasAVX2() const { return hasAVX1() && hasExt(eExt::AVX2); }
     inline bool hasFMA () const { return hasAVX2() && hasExt(eExt::FMA3); }
+    
+    inline bool hasNEON() const { return hasExt(eExt::NEON); }
+
 
     inline bool matchesAMD64v1() const { return hasExt(eExt::CMOV) && hasExt(eExt::CMPXCHG8B) && hasExt(eExt::FPU) && hasExt(eExt::FXRS) && hasExt(eExt::MMX) && hasExt(eExt::SSE1) && hasExt(eExt::SSE2); }
     inline bool matchesAMD64v2() const { return hasExt(eExt::CMPXCHG16B) && hasExt(eExt::LAHF_SAHF) && hasExt(eExt::POPCNT) && hasExt(eExt::SSE3) && hasExt(eExt::SSSE3) && hasExt(eExt::SSE4_1) && hasExt(eExt::SSE4_2); }
     inline bool matchesAMD64v3() const { return hasExt(eExt::AVX1) && hasExt(eExt::AVX2) && hasExt(eExt::BMI1) && hasExt(eExt::BMI2) && hasExt(eExt::FP16C) && hasExt(eExt::FMA3) && hasExt(eExt::LZCNT) && hasExt(eExt::MOVBE); }
     inline bool matchesAMD64v4() const { return hasExt(eExt::AVX512F) && hasExt(eExt::AVX512BW) && hasExt(eExt::AVX512CD) && hasExt(eExt::AVX512DQ) && hasExt(eExt::AVX512VL); }
+    
+    inline bool matchesARM64  () const { return hasNEON(); }
 
     static std::string eExtToName(eExt Ext);
   };
@@ -224,7 +233,7 @@ protected:
   void xDetectExts();
   void xDetectMem ();
 
-  static xExts xDetectProcExts(uint32_t HighestFunctionSupported);
+  static xExts xDetectProcExts(uint32_t HighestFunctionSupported = 1);
   static bool  xDetectOSAVX   ();
 };
 
