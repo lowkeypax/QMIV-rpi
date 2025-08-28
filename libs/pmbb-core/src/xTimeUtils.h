@@ -20,7 +20,7 @@ using tDurationMS = std::chrono::duration<double, std::milli>;
 using tDurationS  = std::chrono::duration<double            >;
 
 // Time Stamp Counter
-#if (X_ARCHITECTURE_AMD64)
+#if X_ARCHITECTURE_AMD64
   #define NoBarierRDTSC 0
   #if NoBarierRDTSC
     static inline uint64 xTSC() { return __rdtsc(); }
@@ -29,6 +29,10 @@ using tDurationS  = std::chrono::duration<double            >;
     static inline uint64 xTSC() { uint32 T;  return __rdtscp(&T); }
     #define X_TSC_IMPLEMENTATION "RDTSCP"
   #endif
+#elif X_ARCHITECTURE_ARM64
+  static inline uint64 xTSC() { uint64_t cntvct; asm volatile ("mrs %0, cntvct_el0;" : "=r"(cntvct) :: "memory"); return cntvct; }
+  static inline uint32 xFQ() { uint32_t freq_hz; asm volatile ("mrs %0, cntfrq_el0; isb; " : "=r"(freq_hz) :: "memory"); return freq_hz; }
+  #define X_TSC_IMPLEMENTATION "CNTCT"
 #else
   static inline uint64 xTSC() { return (uint64)(tClock::now().time_since_epoch().count()); }
   #define X_TSC_IMPLEMENTATION "std::chrono::high_resolution_clock"
@@ -48,6 +52,10 @@ protected:
   flt64 m_TicksPerMicroSec = 0.0;
   flt64 m_TicksPerMiliSec  = 0.0;
   flt64 m_TicksPerSec      = 0.0;
+
+  #if X_ARCHITECTURE_ARM64
+    uint32 m_Freq = xFQ();
+  #endif
 
 public:
   void sampleBeg() { m_ProcBegTime = tClock::now(); m_ProcBegTicks = xTSC(); }

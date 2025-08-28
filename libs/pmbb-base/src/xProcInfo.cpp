@@ -314,7 +314,6 @@ std::string xProcInfo::xFormatMemInfo(const xMem& Mem)
       m_OSAVX = xDetectOSAVX();
     #endif
     #if X_ARCHITECTURE_ARM64
-      printf("DETECT FUN\n");
       m_Exts  = xDetectProcExts();
     #endif
     m_ExtsChecked = true;

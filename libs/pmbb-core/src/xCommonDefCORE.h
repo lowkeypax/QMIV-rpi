@@ -26,8 +26,12 @@ namespace PMBB_NAMESPACE { using namespace PMBB_BASE; }
 //===============================================================================================================================================================================================================
 #if defined(_MSC_VER) && (defined(_M_X64) || defined(_M_AMD64) || defined(_M_IX86))
 #include <intrin.h>
-#elif defined(__GNUC__) && (defined(__x86_64__) || defined(__i386__))
-#include <x86intrin.h>
+#elif defined(__GNUC__) 
+  #if (defined(__x86_64__) || defined(__i386__))
+    #include <x86intrin.h>
+  #elif (defined (__aarch64__) && defined (__ARM_NEON))
+    #include <arm_neon.h>
+  #endif
 #endif
 
 #define USE_SIMD 1

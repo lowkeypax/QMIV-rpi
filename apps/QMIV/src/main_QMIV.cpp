@@ -29,6 +29,12 @@
 
 using namespace PMBB_NAMESPACE;
 
+#ifdef __ARM_ARCH_ISA_A64
+  uint64 xTSCaa() {uint64_t cntvct; __asm__ __volatile__ ("mrs %0, cntvct_el0;" : "=r"(cntvct) :: "memory"); return cntvct; }
+  uint32 xFQaa() { uint32_t freq_hz; asm volatile ("mrs %0, cntfrq_el0; isb; " : "=r"(freq_hz) :: "memory"); return freq_hz; }
+#endif
+
+
 //===============================================================================================================================================================================================================
 // Main
 //===============================================================================================================================================================================================================
@@ -38,6 +44,13 @@ using namespace PMBB_NAMESPACE;
 
 int32 APP_MAIN(int argc, char *argv[], char* /*envp*/[])
 {
+  fmt::print("cntvct_el0: {}\n", xTSCaa());
+  fmt::print("cntvct_el0: {}\n", xTSCaa());
+  fmt::print("cntvct_el0: {}\n", xTSCaa());
+  fmt::print("cntvct_el0: {}\n", xTSCaa());
+  fmt::print("cntvct_el0: {}\n", xTSCaa());
+  fmt::print("cntvct_el0: {}\n", xTSCaa());
+  fmt::print("cntfq: {}\n", xFQaa());
   fmt::print("{}\n", xAppQMIV::c_BannerString);
   tTimePoint AppBeg = tClock::now();
   xAppQMIV AppQMIV;
