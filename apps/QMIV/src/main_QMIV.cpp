@@ -44,14 +44,14 @@ using namespace PMBB_NAMESPACE;
 
 int32 APP_MAIN(int argc, char *argv[], char* /*envp*/[])
 {
-  fmt::print("cntvct_el0: {}\n", xTSCaa());
-  fmt::print("cntvct_el0: {}\n", xTSCaa());
-  fmt::print("cntvct_el0: {}\n", xTSCaa());
-  fmt::print("cntvct_el0: {}\n", xTSCaa());
-  fmt::print("cntvct_el0: {}\n", xTSCaa());
-  fmt::print("cntvct_el0: {}\n", xTSCaa());
-  fmt::print("cntfq: {}\n", xFQaa());
-  fmt::print("{}\n", xAppQMIV::c_BannerString);
+  //fmt::print("cntvct_el0: {}\n", xTSCaa());
+  //fmt::print("cntvct_el0: {}\n", xTSCaa());
+  //fmt::print("cntvct_el0: {}\n", xTSCaa());
+  //fmt::print("cntvct_el0: {}\n", xTSCaa());
+  //fmt::print("cntvct_el0: {}\n", xTSCaa());
+  //fmt::print("cntvct_el0: {}\n", xTSCaa());
+  //fmt::print("cntfq: {}\n", xFQaa());
+  //fmt::print("{}\n", xAppQMIV::c_BannerString);
   tTimePoint AppBeg = tClock::now();
   xAppQMIV AppQMIV;
 

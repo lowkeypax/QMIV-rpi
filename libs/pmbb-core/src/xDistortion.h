@@ -98,15 +98,6 @@ public:
 
 #endif //X_CAN_USE_???
 
-
-  //static inline  int32 CalcSD (const uint16* Tst, const uint16* Ref,                                   int32 Area               ) { return xDistortionSTD::CalcSD (Tst, Ref,                       Area          ); }
-  //static inline  int32 CalcSD (const uint16* Tst, const uint16* Ref, int32 TstStride, int32 RefStride, int32 Width, int32 Height) { return xDistortionSTD::CalcSD (Tst, Ref, TstStride, RefStride, Width,  Height); }
-  //static inline uint32 CalcSAD(const uint16* Tst, const uint16* Ref,                                   int32 Area               ) { return xDistortionSTD::CalcSAD(Tst, Ref,                       Area          ); }
-  //static inline uint32 CalcSAD(const uint16* Tst, const uint16* Ref, int32 TstStride, int32 RefStride, int32 Width, int32 Height) { return xDistortionSTD::CalcSAD(Tst, Ref, TstStride, RefStride, Width,  Height); }
-  //static inline uint64 CalcSSD(const uint16* Tst, const uint16* Ref,                                   int32 Area               ) { return xDistortionSTD::CalcSSD(Tst, Ref,                       Area          ); }
-  //static inline uint64 CalcSSD(const uint16* Tst, const uint16* Ref, int32 TstStride, int32 RefStride, int32 Width, int32 Height) { return xDistortionSTD::CalcSSD(Tst, Ref, TstStride, RefStride, Width,  Height); }
-
-
   static inline  int64 CalcWeightedSD (const uint16* Tst, const uint16* Ref, const uint16* Mask,                                                    int32 Area               ) { return xDistortionSTD::CalcWeightedSD (Tst, Ref, Mask,                            Area          ); }
   static inline  int64 CalcWeightedSD (const uint16* Tst, const uint16* Ref, const uint16* Mask, int32 TstStride, int32 RefStride, int32 MskStride, int32 Width, int32 Height) { return xDistortionSTD::CalcWeightedSD (Tst, Ref, Mask, TstStride, RefStride, MskStride, Width,  Height); }
   static inline uint64 CalcWeightedSSD(const uint16* Tst, const uint16* Ref, const uint16* Mask,                                                    int32 Area               ) { return xDistortionSTD::CalcWeightedSSD(Tst, Ref, Mask,                            Area          ); }
@@ -121,3 +112,4 @@ public:
 #undef X_CAN_USE_SSE
 #undef X_CAN_USE_AVX
 #undef X_CAN_USE_AVX512
+#undef X_CAN_USE_NEON

@@ -553,6 +553,62 @@ TEST_CASE("xPixelOpsSTD")
   fmt::print("TIME(xPixelOpsSTD) = {}s\n", std::chrono::duration_cast<tDurationS>(tClock::now() - T).count());
 }
 
+#if X_SIMD_CAN_USE_NEON
+TEST_CASE("xPixelOpsNEON")
+{
+  tTimePoint T = tClock::now();
+  testCvt
+  (
+    static_cast<void(*)(uint16*, const uint8* , int32, int32, int32, int32)>(&xPixelOpsSTD::Cvt),
+    static_cast<void(*)(uint8* , const uint16*, int32, int32, int32, int32)>(&xPixelOpsSTD::Cvt)
+  );
+  testResample
+  (
+    static_cast<void(*)(uint16*, const uint16*, int32, int32, int32, int32)>(&xPixelOpsSTD::UpsampleHV  ),
+    static_cast<void(*)(uint16*, const uint16*, int32, int32, int32, int32)>(&xPixelOpsSTD::DownsampleHV),
+    { 2,2 }
+  );
+  testCvtResample
+  (
+    static_cast<void(*)(uint8* , const uint16*, int32, int32, int32, int32)>(&xPixelOpsSTD::Cvt            ),
+    static_cast<void(*)(uint16*, const uint8* , int32, int32, int32, int32)>(&xPixelOpsSTD::CvtUpsampleHV  ),
+    static_cast<void(*)(uint8* , const uint16*, int32, int32, int32, int32)>(&xPixelOpsSTD::CvtDownsampleHV),
+    { 2,2 }
+  );
+  testResample
+  (
+    static_cast<void(*)(uint16*, const uint16*, int32, int32, int32, int32)>(&xPixelOpsSTD::UpsampleH  ),
+    static_cast<void(*)(uint16*, const uint16*, int32, int32, int32, int32)>(&xPixelOpsSTD::DownsampleH),
+    { 2,1 }
+  );
+  testCvtResample
+  (
+    static_cast<void(*)(uint8* , const uint16*, int32, int32, int32, int32)>(&xPixelOpsSTD::Cvt           ),
+    static_cast<void(*)(uint16*, const uint8* , int32, int32, int32, int32)>(&xPixelOpsSTD::CvtUpsampleH  ),
+    static_cast<void(*)(uint8* , const uint16*, int32, int32, int32, int32)>(&xPixelOpsSTD::CvtDownsampleH),
+    { 2,1 }
+  );
+  testRearrange
+  (
+    &xPixelOpsSTD::AOS4fromSOA3,
+    &xPixelOpsSTD::SOA3fromAOS4
+  );
+  testCheckIfInRange
+  (
+    &xPixelOpsSTD::CheckIfInRange
+  );
+  testCountNonZero
+  (
+    &xPixelOpsSTD::CountNonZero
+  );
+  testCompareEqual
+  (
+    &xPixelOpsSTD::CompareEqual
+  );
+  fmt::print("TIME(xPixelOpsNEON) = {}s\n", std::chrono::duration_cast<tDurationS>(tClock::now() - T).count());
+}
+#endif
+
 #if X_SIMD_CAN_USE_SSE
 TEST_CASE("xPixelOpsSSE")
 {
