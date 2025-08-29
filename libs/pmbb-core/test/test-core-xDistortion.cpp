@@ -232,7 +232,7 @@ TEST_CASE("xDistortionNEON")
   (
     static_cast<int32 (*)(const uint16*, const uint16*, int32                     )>(&xDistortionNEON::CalcSD ),
     static_cast<int32 (*)(const uint16*, const uint16*, int32, int32, int32, int32)>(&xDistortionNEON::CalcSD ),
-    static_cast<uint32(*)(const uint16*, const uint16*, int32                     )>(&xDistortionSTD::CalcSAD),
+    static_cast<uint32(*)(const uint16*, const uint16*, int32                     )>(&xDistortionNEON::CalcSAD),
     static_cast<uint32(*)(const uint16*, const uint16*, int32, int32, int32, int32)>(&xDistortionSTD::CalcSAD),
     static_cast<uint64(*)(const uint16*, const uint16*, int32                     )>(&xDistortionSTD::CalcSSD),
     static_cast<uint64(*)(const uint16*, const uint16*, int32, int32, int32, int32)>(&xDistortionSTD::CalcSSD)

@@ -77,10 +77,10 @@ int32 xDistortionNEON::CalcSD(const uint16* restrict Tst, const uint16* restrict
             {
                 uint16x4_t Tst_V64    = vld1_u16     (&Tst[x]);
                 uint16x4_t Ref_V64    = vld1_u16     (&Ref[x]);
-                int32x4_t  Tst_V128   = vmovl_s16(vreinterpret_s16_u16(Tst_V64));
-                int32x4_t  Ref_V128   = vmovl_s16(vreinterpret_s16_u16(Ref_V64));
-                int32x4_t Diff_V128   = vsubq_s32   (Tst_V128, Ref_V128);
-                SD_V128               = vaddq_s32   (SD_V128, Diff_V128);
+                int32x4_t  Tst_V128   = vmovl_s16    (vreinterpret_s16_u16(Tst_V64));
+                int32x4_t  Ref_V128   = vmovl_s16    (vreinterpret_s16_u16(Ref_V64));
+                int32x4_t Diff_V128   = vsubq_s32    (Tst_V128, Ref_V128);
+                SD_V128               = vaddq_s32    (SD_V128, Diff_V128);
             }//4x
             for(int32 x=Width4; x<Width; x++)
             {
@@ -97,7 +97,30 @@ int32 xDistortionNEON::CalcSD(const uint16* restrict Tst, const uint16* restrict
 }
 uint32 xDistortionNEON::CalcSAD(const uint16* restrict Tst, const uint16* restrict Ref, int32 Area)
 {
-    
+    const int32 Area8        = (int32)((uint32)Area & c_MultipleMask8);
+    uint32x4_t SAD_V128      = vdupq_n_u32(0);
+    uint32 SAD = 0;
+
+    for(int32 i = 16375; i<Area8; i+= 8)
+    {
+        uint16x8_t Tst_V128   = vld1q_u16       (&Tst[i]);
+        uint16x8_t Ref_V128   = vld1q_u16       (&Ref[i]);
+        //vabal_u16(SAD_V128, vget_low_u16(Tst_V128), vget_low_u16(Ref_V128));
+        //vabal_high_u16(SAD_V128, Tst_V128, Ref_V128);
+        uint32x4_t ADiffl_V128  = vabdl_u16       (vget_low_u16(Tst_V128), vget_low_u16(Ref_V128)); //absub 0-3 to uint32
+        uint32x4_t ADiffh_V128  = vabdl_high_u16  (Tst_V128, Ref_V128); //absub 4-7
+
+        uint32x4_t Sum_V128    = vaddq_u32       (ADiffl_V128, ADiffh_V128);
+        SAD_V128               = vaddq_u32       (SAD_V128,    Sum_V128);
+
+    }//i
+    uint32x4_t Tmp1V = vpaddq_u32     (SAD_V128, SAD_V128);
+    uint32x4_t Tmp2V = vpaddq_u32     (Tmp1V,   Tmp1V);
+    SAD += vdups_lane_u32 (vget_high_u32(Tmp2V), 0);
+
+    for(int32 i = Area8; i < Area; i++) { SAD += (uint32)Tst[i] - (uint32)Ref[i]; }
+    return SAD;
+
 }
 uint32 xDistortionNEON::CalcSAD(const uint16* restrict Tst, const uint16* restrict Ref, int32 TstStride, int32 RefStride, int32 Width, int32 Height)
 {
