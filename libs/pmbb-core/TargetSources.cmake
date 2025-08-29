@@ -1,8 +1,8 @@
 set(SRCLIST_COMMON_H src/xCommonDefCORE.h src/xMiscUtilsCORE.h  )
 set(SRCLIST_COMMON_C                      src/xMiscUtilsCORE.cpp)
 
-set(SRCLIST_DIST_H src/xDistortion.h src/xDistortionSTD.h   src/xDistortionSSE.h   src/xDistortionAVX.h   src/xDistortionAVX512.h  )
-set(SRCLIST_DIST_C                   src/xDistortionSTD.cpp src/xDistortionSSE.cpp src/xDistortionAVX.cpp src/xDistortionAVX512.cpp)
+set(SRCLIST_DIST_H src/xDistortion.h src/xDistortionSTD.h   src/xDistortionSSE.h   src/xDistortionAVX.h   src/xDistortionAVX512.h  src/xDistortion.h)
+set(SRCLIST_DIST_C                   src/xDistortionSTD.cpp src/xDistortionSSE.cpp src/xDistortionAVX.cpp src/xDistortionAVX512.cpp src/xDistortionNEON.cpp)
 
 set(SRCLIST_PIXOPS_H src/xPixelOps.h src/xPixelOpsBase.h src/xPixelOpsSTD.h   src/xPixelOpsSSE.h   src/xPixelOpsAVX.h   src/xPixelOpsAVX512.h  )
 set(SRCLIST_PIXOPS_C                                     src/xPixelOpsSTD.cpp src/xPixelOpsSSE.cpp src/xPixelOpsAVX.cpp src/xPixelOpsAVX512.cpp)
