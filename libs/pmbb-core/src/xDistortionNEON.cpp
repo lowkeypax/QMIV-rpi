@@ -119,6 +119,7 @@ uint32 xDistortionNEON::CalcSAD(const uint16* restrict Tst, const uint16* restri
     SAD += vdups_lane_u32 (vget_high_u32(Tmp2V), 0);
 
     for(int32 i = Area8; i < Area; i++) { SAD += (uint32)Tst[i] - (uint32)Ref[i]; }
+//absolute val
     return SAD;
 
 }
