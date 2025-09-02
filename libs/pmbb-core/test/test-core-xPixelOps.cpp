@@ -559,8 +559,8 @@ TEST_CASE("xPixelOpsNEON")
   tTimePoint T = tClock::now();
   testCvt
   (
-    static_cast<void(*)(uint16*, const uint8* , int32, int32, int32, int32)>(&xPixelOpsSTD::Cvt),
-    static_cast<void(*)(uint8* , const uint16*, int32, int32, int32, int32)>(&xPixelOpsSTD::Cvt)
+    static_cast<void(*)(uint16*, const uint8* , int32, int32, int32, int32)>(&xPixelOpsNEON::Cvt),
+    static_cast<void(*)(uint8* , const uint16*, int32, int32, int32, int32)>(&xPixelOpsNEON::Cvt)
   );
   testResample
   (
