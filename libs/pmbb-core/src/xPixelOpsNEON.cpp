@@ -357,23 +357,380 @@ void xPixelOpsNEON::CvtDownsampleHV(uint8* restrict Dst, const uint16* Src, int3
   const uint16* restrict SrcL0 = Src;
   const uint16* restrict SrcL1 = Src + SrcStride;
 
-  
+  if(((uint32)DstWidth & c_RemainderMask16) == 0) //Width%16==0
+  {
+    for(int32 y = 0; y < DstHeight; y++)
+    {
+      for(int32 x = 0; x < DstWidth; x += 16)
+      {
+        const int32 SrcX = x<<1;
+        uint16x8_t TopA = vld1q_u16(&SrcL0[SrcX]);
+        uint16x8_t TopB = vld1q_u16(&SrcL0[SrcX+8]);
+        uint16x8_t TopC = vld1q_u16(&SrcL0[SrcX+16]);
+        uint16x8_t TopD = vld1q_u16(&SrcL0[SrcX+24]);
+
+        uint16x8_t BotA = vld1q_u16(&SrcL0[SrcX]);
+        uint16x8_t BotB = vld1q_u16(&SrcL0[SrcX+8]);
+        uint16x8_t BotC = vld1q_u16(&SrcL0[SrcX+16]);
+        uint16x8_t BotD = vld1q_u16(&SrcL0[SrcX+24]);
+
+        uint16x8_t A = vshrq_n_u16(vaddq_u16(TopA, BotA),1); //add and half
+        uint16x8_t B = vshrq_n_u16(vaddq_u16(TopB, BotB),1);
+        uint16x8_t C = vshrq_n_u16(vaddq_u16(TopC, BotC),1);
+        uint16x8_t D = vshrq_n_u16(vaddq_u16(TopD, BotD),1);
+
+        uint32x4_t A32 = vshrq_n_u32(vpaddlq_u16(A),1); //add pairwise and half
+        uint32x4_t B32 = vshrq_n_u32(vpaddlq_u16(B),1);
+        uint32x4_t C32 = vshrq_n_u32(vpaddlq_u16(C),1);
+        uint32x4_t D32 = vshrq_n_u32(vpaddlq_u16(D),1);
+
+        uint16x8_t AB = vcombine_u16(vqmovn_u32(A32), vqmovn_u32(B32));
+        uint16x8_t CD = vcombine_u16(vqmovn_u32(C32), vqmovn_u32(D32));
+
+        uint8x16_t DstV = vcombine_u8(vqmovn_u16(AB), vqmovn_u16(CD));
+
+        vst1q_u8 (&Dst[x], DstV);
+      }
+      SrcL0 += (SrcStride << 1);
+      SrcL1 += (SrcStride << 1);
+      Dst   += DstStride;
+    }
+  }
+  else
+  {
+    const int32 Width16 = (int32)((uint32)DstWidth & c_MultipleMask16);
+    const int32 Width8  = (int32)((uint32)DstWidth & c_MultipleMask8 );
+
+    for(int32 y = 0; y < DstHeight; y++)
+    {
+      for(int32 x = 0; x < Width16; x += 16)
+      {
+        const int32 SrcX = x<<1;
+        uint16x8_t TopA = vld1q_u16(&SrcL0[SrcX]);
+        uint16x8_t TopB = vld1q_u16(&SrcL0[SrcX+8]);
+        uint16x8_t TopC = vld1q_u16(&SrcL0[SrcX+16]);
+        uint16x8_t TopD = vld1q_u16(&SrcL0[SrcX+24]);
+
+        uint16x8_t BotA = vld1q_u16(&SrcL0[SrcX]);
+        uint16x8_t BotB = vld1q_u16(&SrcL0[SrcX+8]);
+        uint16x8_t BotC = vld1q_u16(&SrcL0[SrcX+16]);
+        uint16x8_t BotD = vld1q_u16(&SrcL0[SrcX+24]);
+
+        uint16x8_t A = vshrq_n_u16(vaddq_u16(TopA, BotA),1); //add and half
+        uint16x8_t B = vshrq_n_u16(vaddq_u16(TopB, BotB),1);
+        uint16x8_t C = vshrq_n_u16(vaddq_u16(TopC, BotC),1);
+        uint16x8_t D = vshrq_n_u16(vaddq_u16(TopD, BotD),1);
+
+        uint32x4_t A32 = vshrq_n_u32(vpaddlq_u16(A),1); //add pairwise and half
+        uint32x4_t B32 = vshrq_n_u32(vpaddlq_u16(B),1);
+        uint32x4_t C32 = vshrq_n_u32(vpaddlq_u16(C),1);
+        uint32x4_t D32 = vshrq_n_u32(vpaddlq_u16(D),1);
+
+        uint16x8_t AB = vcombine_u16(vqmovn_u32(A32), vqmovn_u32(B32));
+        uint16x8_t CD = vcombine_u16(vqmovn_u32(C32), vqmovn_u32(D32));
+
+        uint8x16_t DstV = vcombine_u8(vqmovn_u16(AB), vqmovn_u16(CD));
+
+        vst1q_u8 (&Dst[x], DstV);
+      }
+      for(int32 x = Width16; x < Width8; x += 8)
+      {
+        const int32 SrcX = x<<1;
+        uint16x8_t TopA = vld1q_u16(&SrcL0[SrcX]);
+        uint16x8_t TopB = vld1q_u16(&SrcL0[SrcX+8]);
+
+        uint16x8_t BotA = vld1q_u16(&SrcL0[SrcX]);
+        uint16x8_t BotB = vld1q_u16(&SrcL0[SrcX+8]);
+
+        uint16x8_t A = vshrq_n_u16(vaddq_u16(TopA, BotA),1); //add and half
+        uint16x8_t B = vshrq_n_u16(vaddq_u16(TopB, BotB),1);
+
+        uint32x4_t A32 = vshrq_n_u32(vpaddlq_u16(A),1); //add pairwise and half
+        uint32x4_t B32 = vshrq_n_u32(vpaddlq_u16(B),1);
+
+        uint16x8_t AB = vcombine_u16(vqmovn_u32(A32), vqmovn_u32(B32));
+
+        uint8x8_t DstV = vqmovn_u16(AB);
+
+        vst1_u8 (&Dst[x], DstV);
+      }
+      for(int32 x = Width8; x < DstWidth; x++)
+      {
+        const int32 SrcX = x << 1;
+        int32 D = ((int32)SrcL0[SrcX] + (int32)SrcL0[SrcX + 1] + (int32)SrcL1[SrcX] + (int32)SrcL1[SrcX + 1] + 2) >> 2;
+        Dst[x] = (uint8)xClip<int32>(D, 0, 255);
+      }
+      SrcL0 += (SrcStride << 1);
+      SrcL1 += (SrcStride << 1);
+      Dst   += DstStride;
+    }
+  }
   return;
 }
 void xPixelOpsNEON::UpsampleH(uint16* restrict Dst, const uint16* restrict Src, int32 DstStride, int32 SrcStride, int32 DstWidth, int32 DstHeight)
 {
+  if(((uint32)DstWidth & c_RemainderMask16)==0) //Width%16==0
+  {
+    for(int32 y=0; y<DstHeight; y++)
+    {
+      for(int32 x=0; x<DstWidth; x+=16)
+      {
+        uint16x8_t SrcV = vld1q_u16(&Src[x>>1]);
+        uint16x8x2_t DstV = vzipq_u16 (SrcV, SrcV);
+
+        vst1q_u16 (&Dst[x], DstV.val[0]);
+        vst1q_u16 (&Dst[x+8], DstV.val[1]);
+      }
+      Src += SrcStride;
+      Dst += DstStride;
+    }
+  }
+  else
+  {
+    const int32 Width16 = (int32)((uint32)DstWidth & c_MultipleMask16);
+    const int32 Width8  = (int32)((uint32)DstWidth & c_MultipleMask8 );
+
+    for(int32 y=0; y<DstHeight; y++)
+    {
+      for(int32 x=0; x<Width16; x+=16)
+      {
+        uint16x8_t SrcV = vld1q_u16(&Src[x>>1]);
+        uint16x8x2_t DstV = vzipq_u16 (SrcV, SrcV);
+
+        vst1q_u16 (&Dst[x], DstV.val[0]);
+        vst1q_u16 (&Dst[x+8], DstV.val[1]);
+      }
+      for(int32 x=Width16; x<Width8; x+=8)
+      {
+        uint16x4_t SrcV = vld1_u16(&Src[x>>1]);
+        uint16x4x2_t DstV = vzip_u16 (SrcV, SrcV);
+
+        vst1_u16 (&Dst[x], DstV.val[0]);
+        vst1_u16 (&Dst[x+4], DstV.val[1]);
+      }
+      for(int32 x=Width8; x<DstWidth; x+=2)
+      {
+        const uint16 S = Src[x>>1];
+        Dst[x  ] = S;
+        Dst[x+1] = S;
+      }
+      Src += SrcStride;
+      Dst += DstStride;
+    }
+  }
   return;
 }
 void xPixelOpsNEON::DownsampleH(uint16* restrict Dst, const uint16* Src, int32 DstStride, int32 SrcStride, int32 DstWidth, int32 DstHeight)
 {
+  if(((uint32)DstWidth & (uint32)c_RemainderMask8)==0) //Width%8==0
+  {
+    for(int32 y=0; y<DstHeight; y++)
+    {
+      for(int32 x=0; x<DstWidth; x+=8)
+      {
+        const int32 SrcX = x<<1;
+        uint16x8_t LeftV = vld1q_u16(&Src[SrcX]);
+        uint16x8_t RightV = vld1q_u16(&Src[SrcX+8]);
+        uint32x4_t Left32 = vshrq_n_u32(vpaddlq_u16(LeftV),1);
+        uint32x4_t Right32 = vshrq_n_u32(vpaddlq_u16(RightV),1);  //rounding??
+
+        uint16x8_t DstV = vcombine_u16(vqmovn_u32(Left32), vqmovn_u32(Right32));
+
+        vst1q_u16(&Dst[x], DstV);
+      }
+      Src += SrcStride;
+      Dst += DstStride;
+    }
+  }  
+  else
+  {
+    const int32 Width8  = (int32)((uint32)DstWidth & (uint32)c_MultipleMask8);
+    const int32 Width4  = (int32)((uint32)DstWidth & (uint32)c_MultipleMask4);
+
+    for(int32 y=0; y<DstHeight; y++)
+    {
+      for(int32 x=0; x<Width8; x+=8)
+      {
+        const int32 SrcX = x<<1;
+        uint16x8_t LeftV = vld1q_u16(&Src[SrcX]);
+        uint16x8_t RightV = vld1q_u16(&Src[SrcX+8]);
+        uint32x4_t Left32 = vshrq_n_u32(vpaddlq_u16(LeftV),1);
+        uint32x4_t Right32 = vshrq_n_u32(vpaddlq_u16(RightV),1);
+
+        uint16x8_t DstV = vcombine_u16(vqmovn_u32(Left32), vqmovn_u32(Right32));
+        vst1q_u16(&Dst[x], DstV);
+      }
+      for(int32 x=Width8; x<Width4; x+=4)
+      {
+        const int32 SrcX = x<<1;
+        uint16x4_t LeftV = vld1_u16(&Src[SrcX]);
+        uint16x4_t RightV = vld1_u16(&Src[SrcX+4]);
+        uint16x4_t DstV = vshr_n_u16(vpadd_u16(LeftV, RightV),1);
+
+        vst1_u16(&Dst[x], DstV);
+
+      }
+      for(int32 x=Width4; x<DstWidth; x++)
+      {      
+        const int32 SrcX = x<<1;
+        int16 D = ((int32)Src[SrcX  ] + (int32)Src[SrcX+1] + 1)>>1;
+        Dst[x] = D;
+      }
+      Src += SrcStride;
+      Dst += DstStride;
+    }
+  }
   return;
 }
 void xPixelOpsNEON::CvtUpsampleH(uint16* restrict Dst, const uint8* Src, int32 DstStride, int32 SrcStride, int32 DstWidth, int32 DstHeight)
 {
+  if(((uint32)DstWidth & c_RemainderMask32)==0) //Width%32==0
+  {
+    for(int32 y=0; y<DstHeight; y++)
+    {
+      for(int32 x=0; x<DstWidth; x+=32)
+      {
+        uint8x16_t SrcV = vld1q_u8(&Src[x>>1]);
+        uint16x8_t SrcVL = vmovl_u8(vget_low_u8(SrcV));
+        uint16x8_t SrcVH = vmovl_high_u8(SrcV);
+
+        uint16x8x2_t DstVL = vzipq_u16 (SrcVL, SrcVL);
+        uint16x8x2_t DstVH = vzipq_u16 (SrcVH, SrcVH);
+
+        vst1q_u16(&Dst[x],      DstVL.val[0]);
+        vst1q_u16(&Dst[x + 8],  DstVL.val[1]);
+        vst1q_u16(&Dst[x + 16], DstVH.val[0]);
+        vst1q_u16(&Dst[x + 24], DstVH.val[1]);
+      }
+      Src += SrcStride;
+      Dst += DstStride;
+    }
+  }
+  else
+  {
+    const int32 Width32 = (int32)((uint32)DstWidth & (uint32)c_MultipleMask32);
+    const int32 Width16 = (int32)((uint32)DstWidth & (uint32)c_MultipleMask16);
+
+    for(int32 y=0; y<DstHeight; y++)
+    {
+      for(int32 x=0; x<Width32; x+=32)
+      {
+        uint8x16_t SrcV = vld1q_u8(&Src[x>>1]);
+        uint16x8_t SrcVL = vmovl_u8(vget_low_u8(SrcV));
+        uint16x8_t SrcVH = vmovl_high_u8(SrcV);
+
+        uint16x8x2_t DstVL = vzipq_u16 (SrcVL, SrcVL);
+        uint16x8x2_t DstVH = vzipq_u16 (SrcVH, SrcVH);
+
+        vst1q_u16(&Dst[x],      DstVL.val[0]);
+        vst1q_u16(&Dst[x + 8],  DstVL.val[1]);
+        vst1q_u16(&Dst[x + 16], DstVH.val[0]);
+        vst1q_u16(&Dst[x + 24], DstVH.val[1]);
+      }
+      for(int32 x=Width32; x<Width16; x+=16)
+      {
+        uint8x8_t SrcV = vld1_u8(&Src[x>>1]);
+        uint16x8_t SrcVL = vmovl_u8(SrcV);
+
+        uint16x8x2_t DstVL = vzipq_u16 (SrcVL, SrcVL);
+
+        vst1q_u16 (&Dst[x], DstVL.val[0]);
+        vst1q_u16 (&Dst[x+8], DstVL.val[1]);
+      }
+      for(int32 x=Width16; x<DstWidth; x+=2)
+      {
+        int16 S = Src[x>>1];
+        Dst[x  ] = S;
+        Dst[x+1] = S;
+      }
+      Src += SrcStride;
+      Dst += DstStride;
+    }
+  }
   return;
 }
 void xPixelOpsNEON::CvtDownsampleH(uint8* restrict Dst, const uint16* Src, int32 DstStride, int32 SrcStride, int32 DstWidth, int32 DstHeight)
 {
+  if(((uint32)DstWidth & (uint32)c_RemainderMask8)==0) //Width%8==0
+  {
+    for(int32 y=0; y<DstHeight; y++)
+    {
+      for(int32 x=0; x<DstWidth; x+=16)
+      {
+        const int32 SrcX = x<<1;
+        uint16x8_t A = vld1q_u16(&Src[SrcX]);
+        uint16x8_t B = vld1q_u16(&Src[SrcX+8]);
+        uint16x8_t C = vld1q_u16(&Src[SrcX+16]);
+        uint16x8_t D = vld1q_u16(&Src[SrcX+24]);
+
+        uint32x4_t A32 = vshrq_n_u32(vpaddlq_u16(A),1); //add pairwise and half
+        uint32x4_t B32 = vshrq_n_u32(vpaddlq_u16(B),1);
+        uint32x4_t C32 = vshrq_n_u32(vpaddlq_u16(C),1);
+        uint32x4_t D32 = vshrq_n_u32(vpaddlq_u16(D),1);
+
+        uint16x8_t AB = vcombine_u16(vqmovn_u32(A32), vqmovn_u32(B32));
+        uint16x8_t CD = vcombine_u16(vqmovn_u32(C32), vqmovn_u32(D32));
+
+        uint8x16_t DstV = vcombine_u8(vqmovn_u16(AB), vqmovn_u16(CD));
+
+        vst1q_u8 (&Dst[x], DstV);
+      }
+      Src += SrcStride;
+      Dst += DstStride;
+    }
+  }  
+  else
+  {
+    const int32 Width16 = (int32)((uint32)DstWidth & c_MultipleMask16);
+    const int32 Width8  = (int32)((uint32)DstWidth & c_MultipleMask8 );
+
+    for(int32 y = 0; y < DstHeight; y++)
+    {
+      for(int32 x = 0; x < Width16; x += 16)
+      {
+        const int32 SrcX = x<<1;
+        uint16x8_t A = vld1q_u16(&Src[SrcX]);
+        uint16x8_t B = vld1q_u16(&Src[SrcX+8]);
+        uint16x8_t C = vld1q_u16(&Src[SrcX+16]);
+        uint16x8_t D = vld1q_u16(&Src[SrcX+24]);
+
+        uint32x4_t A32 = vshrq_n_u32(vpaddlq_u16(A),1); //add pairwise and half
+        uint32x4_t B32 = vshrq_n_u32(vpaddlq_u16(B),1);
+        uint32x4_t C32 = vshrq_n_u32(vpaddlq_u16(C),1);
+        uint32x4_t D32 = vshrq_n_u32(vpaddlq_u16(D),1);
+
+        uint16x8_t AB = vcombine_u16(vqmovn_u32(A32), vqmovn_u32(B32));
+        uint16x8_t CD = vcombine_u16(vqmovn_u32(C32), vqmovn_u32(D32));
+
+        uint8x16_t DstV = vcombine_u8(vqmovn_u16(AB), vqmovn_u16(CD));
+
+        vst1q_u8 (&Dst[x], DstV);
+      }
+      for(int32 x = Width16; x < Width8; x += 8)
+      {
+        const int32 SrcX = x<<1;
+        uint16x8_t A = vld1q_u16(&Src[SrcX]);
+        uint16x8_t B = vld1q_u16(&Src[SrcX+8]);
+
+        uint32x4_t A32 = vshrq_n_u32(vpaddlq_u16(A),1); //add pairwise and half
+        uint32x4_t B32 = vshrq_n_u32(vpaddlq_u16(B),1);
+
+        uint16x8_t AB = vcombine_u16(vqmovn_u32(A32), vqmovn_u32(B32));
+
+        uint8x8_t DstV = vqmovn_u16(AB);
+
+        vst1_u8 (&Dst[x], DstV);
+      }
+      for(int32 x = Width8; x < DstWidth; x++)
+      {
+        const int32 SrcX = x << 1;
+        int32 D = ((int32)Src[SrcX] + (int32)Src[SrcX + 1] + 1) >> 1;
+        Dst[x] = (uint8)xClip<int32>(D, 0, 255);
+      }
+      Src += SrcStride;
+      Dst += DstStride;
+    }
+  }
   return;
 }
 bool xPixelOpsNEON::CheckIfInRange(const uint16* Src, int32 SrcStride, int32 Width, int32 Height, int32 BitDepth)

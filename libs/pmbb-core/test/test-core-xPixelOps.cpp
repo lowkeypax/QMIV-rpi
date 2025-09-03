@@ -572,20 +572,20 @@ TEST_CASE("xPixelOpsNEON")
   (
     static_cast<void(*)(uint8* , const uint16*, int32, int32, int32, int32)>(&xPixelOpsNEON::Cvt            ),
     static_cast<void(*)(uint16*, const uint8* , int32, int32, int32, int32)>(&xPixelOpsNEON::CvtUpsampleHV  ),
-    static_cast<void(*)(uint8* , const uint16*, int32, int32, int32, int32)>(&xPixelOpsSTD::CvtDownsampleHV),
+    static_cast<void(*)(uint8* , const uint16*, int32, int32, int32, int32)>(&xPixelOpsNEON::CvtDownsampleHV),
     { 2,2 }
   );
   testResample
   (
-    static_cast<void(*)(uint16*, const uint16*, int32, int32, int32, int32)>(&xPixelOpsSTD::UpsampleH  ),
-    static_cast<void(*)(uint16*, const uint16*, int32, int32, int32, int32)>(&xPixelOpsSTD::DownsampleH),
+    static_cast<void(*)(uint16*, const uint16*, int32, int32, int32, int32)>(&xPixelOpsNEON::UpsampleH  ),
+    static_cast<void(*)(uint16*, const uint16*, int32, int32, int32, int32)>(&xPixelOpsNEON::DownsampleH),
     { 2,1 }
   );
   testCvtResample
   (
-    static_cast<void(*)(uint8* , const uint16*, int32, int32, int32, int32)>(&xPixelOpsSTD::Cvt           ),
-    static_cast<void(*)(uint16*, const uint8* , int32, int32, int32, int32)>(&xPixelOpsSTD::CvtUpsampleH  ),
-    static_cast<void(*)(uint8* , const uint16*, int32, int32, int32, int32)>(&xPixelOpsSTD::CvtDownsampleH),
+    static_cast<void(*)(uint8* , const uint16*, int32, int32, int32, int32)>(&xPixelOpsNEON::Cvt           ),
+    static_cast<void(*)(uint16*, const uint8* , int32, int32, int32, int32)>(&xPixelOpsNEON::CvtUpsampleH  ),
+    static_cast<void(*)(uint8* , const uint16*, int32, int32, int32, int32)>(&xPixelOpsNEON::CvtDownsampleH),
     { 2,1 }
   );
   testRearrange
