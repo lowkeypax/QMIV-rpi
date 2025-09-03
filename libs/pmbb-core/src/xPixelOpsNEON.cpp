@@ -791,6 +791,97 @@ bool xPixelOpsNEON::CheckIfInRange(const uint16* Src, int32 SrcStride, int32 Wid
 }
 void xPixelOpsNEON::AOS4fromSOA3(uint16* restrict DstABCD, const uint16* SrcA, const uint16* SrcB, const uint16* SrcC, const uint16 ValueD, int32 DstStride, int32 SrcStride, int32 Width, int32 Height)
 {
+  const uint16x8_t d = vdupq_n_u16(ValueD);
+
+  if(((uint32)Width & c_RemainderMask8) == 0) //Width%8==0 - fast path without tail
+  {
+    for(int32 y = 0; y < Height; y++)
+    {
+      for(int32 x = 0; x < Width; x += 8)
+      {
+        //load
+        uint16x8_t a = vld1q_u16(& SrcA[x]); //load A0-A7
+        uint16x8_t b = vld1q_u16(& SrcB[x]); //load B0-B7
+        uint16x8_t c = vld1q_u16(& SrcC[x]); //load C0-C7
+
+        //transpose
+        uint16x8x2_t ac = vzipq_u16(a,c);
+        uint16x8x2_t bd = vzipq_u16(b,d);
+
+        uint16x8x2_t abcd0 = vzipq_u16 (ac.val[0], bd.val[0]);
+        uint16x8x2_t abcd1 = vzipq_u16 (ac.val[1], bd.val[1]);
+
+        //save
+        vst1q_u16(&DstABCD[(x << 2) +  0], abcd0.val[0]);
+        vst1q_u16(&DstABCD[(x << 2) +  8], abcd0.val[1]);
+        vst1q_u16(&DstABCD[(x << 2) + 16], abcd1.val[0]);
+        vst1q_u16(&DstABCD[(x << 2) + 24], abcd1.val[1]);
+      }
+      SrcA    += SrcStride;
+      SrcB    += SrcStride;
+      SrcC    += SrcStride;
+      DstABCD += DstStride;
+    }
+  }
+  else
+  {
+    const int32 Width8 = (int32)((uint32)Width & c_MultipleMask8);
+    const int32 Width4 = (int32)((uint32)Width & c_MultipleMask4);
+
+    for(int32 y = 0; y < Height; y++)
+    {
+      for(int32 x = 0; x < Width8; x += 8)
+      {
+        //load
+        uint16x8_t a = vld1q_u16(& SrcA[x]); //load A0-A7
+        uint16x8_t b = vld1q_u16(& SrcB[x]); //load B0-B7
+        uint16x8_t c = vld1q_u16(& SrcC[x]); //load C0-C7
+
+        //transpose
+        uint16x8x2_t ac = vzipq_u16(a,c);
+        uint16x8x2_t bd = vzipq_u16(b,d);
+
+        uint16x8x2_t abcd0 = vzipq_u16 (ac.val[0], bd.val[0]);
+        uint16x8x2_t abcd1 = vzipq_u16 (ac.val[1], bd.val[1]);
+
+        //save
+        vst1q_u16(&DstABCD[(x << 2) +  0], abcd0.val[0]);
+        vst1q_u16(&DstABCD[(x << 2) +  8], abcd0.val[1]);
+        vst1q_u16(&DstABCD[(x << 2) + 16], abcd1.val[0]);
+        vst1q_u16(&DstABCD[(x << 2) + 24], abcd1.val[1]);
+      }
+      for(int32 x = Width8; x < Width4; x += 4)
+      {
+        //load
+        uint16x4_t a = vld1_u16(& SrcA[x]); //load A0-A3
+        uint16x4_t b = vld1_u16(& SrcB[x]); //load B0-B3
+        uint16x4_t c = vld1_u16(& SrcC[x]); //load C0-C3
+
+        //transpose
+        uint16x4x2_t ac = vzip_u16(a,c);
+        uint16x4x2_t bd = vzip_u16(b, vget_low_u16(d));
+        uint16x4x2_t abcd0 = vzip_u16 (ac.val[0], bd.val[0]);
+        uint16x4x2_t abcd1 = vzip_u16 (ac.val[1], bd.val[1]);
+
+        //save
+        vst1_u16(&DstABCD[(x << 2) +  0], abcd0.val[0]);
+        vst1_u16(&DstABCD[(x << 2) +  4], abcd0.val[1]);
+        vst1_u16(&DstABCD[(x << 2) +  8], abcd1.val[0]);
+        vst1_u16(&DstABCD[(x << 2) + 16], abcd1.val[1]);
+      }
+      for(int32 x = Width4; x < Width; x++)
+      {
+        DstABCD[(x << 2) + 0] = SrcA[x];
+        DstABCD[(x << 2) + 1] = SrcB[x];
+        DstABCD[(x << 2) + 2] = SrcC[x];
+        DstABCD[(x << 2) + 3] = ValueD;
+      }
+      SrcA    += SrcStride;
+      SrcB    += SrcStride;
+      SrcC    += SrcStride;
+      DstABCD += DstStride;
+    }
+  }
   return;
 }
 void xPixelOpsNEON::SOA3fromAOS4(uint16* restrict DstA, uint16* restrict DstB, uint16* restrict DstC, const uint16* SrcABCD, int32 DstStride, int32 SrcStride, int32 Width, int32 Height)
@@ -799,7 +890,73 @@ void xPixelOpsNEON::SOA3fromAOS4(uint16* restrict DstA, uint16* restrict DstB, u
 }
 int32 xPixelOpsNEON::CountNonZero(const uint16* Src, int32 SrcStride, int32 Width, int32 Height)
 {
-  return 0;
+  int32_t NumNonZero = 0;
+
+  if(((uint32)Width & (uint32)c_RemainderMask16)==0)
+  {
+    for (int32_t y = 0; y < Height; ++y)
+    {
+      for (int32_t x = 0; x < Width; x += 16)
+      {
+        uint16x8_t SrcV1 = vld1q_u16(&Src[x]);
+        uint16x8_t SrcV2 = vld1q_u16(&Src[x+8]);
+
+        uint16x8_t CmpV1 = vtstq_u16(SrcV1, SrcV1);
+        uint16x8_t CmpV2 = vtstq_u16(SrcV2, SrcV2);
+        CmpV1 = vandq_u16(CmpV1, vdupq_n_u16(1));
+        CmpV2 = vandq_u16(CmpV2, vdupq_n_u16(1));
+
+        NumNonZero += vaddlvq_u16(CmpV1);
+        NumNonZero += vaddlvq_u16(CmpV2);
+      }
+      Src += SrcStride;
+    }
+  }
+  else
+  {
+    int32 Width16 = (int32)((uint32)Width & c_MultipleMask16);
+    int32 Width8  = (int32)((uint32)Width & c_MultipleMask8 );
+    int32 Width4  = (int32)((uint32)Width & c_MultipleMask4 );
+
+    for (int32_t y = 0; y < Height; ++y)
+    {
+      for (int32_t x = 0; x < Width16; x += 16)
+      {
+        uint16x8_t SrcV1 = vld1q_u16(&Src[x]);
+        uint16x8_t SrcV2 = vld1q_u16(&Src[x+8]);
+        uint16x8_t CmpV1 = vtstq_u16(SrcV1, SrcV1);
+        uint16x8_t CmpV2 = vtstq_u16(SrcV2, SrcV2);
+        CmpV1 = vandq_u16(CmpV1, vdupq_n_u16(1));
+        CmpV2 = vandq_u16(CmpV2, vdupq_n_u16(1));
+
+        NumNonZero += vaddlvq_u16(CmpV1);
+        NumNonZero += vaddlvq_u16(CmpV2);
+      }
+      for (int32_t x = Width16; x < Width8; x += 8)
+      {
+        uint16x8_t SrcV1 = vld1q_u16(&Src[x]);
+        uint16x8_t CmpV1 = vtstq_u16(SrcV1, SrcV1);
+        CmpV1 = vandq_u16(CmpV1, vdupq_n_u16(1));
+
+        NumNonZero += vaddlvq_u16(CmpV1);
+      }
+      for (int32_t x = Width8; x < Width4; x += 4)
+      {
+        uint16x4_t SrcV1 = vld1_u16(&Src[x]);
+        uint16x4_t CmpV1 = vtst_u16(SrcV1, SrcV1);
+        CmpV1 = vand_u16(CmpV1, vdup_n_u16(1));
+
+        NumNonZero += vaddlv_u16(CmpV1);
+      }
+      for (int32_t x = Width4; x < Width; ++x)
+      {
+        if(Src[x]!=0) { NumNonZero++; }
+      }
+
+      Src += SrcStride;
+    }
+  }
+  return NumNonZero;
 }
 bool xPixelOpsNEON::CompareEqual(const uint16* Tst, const uint16* Ref, int32 TstStride, int32 RefStride, int32 Width, int32 Height)
 {

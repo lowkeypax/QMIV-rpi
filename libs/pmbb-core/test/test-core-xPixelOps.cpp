@@ -590,7 +590,7 @@ TEST_CASE("xPixelOpsNEON")
   );
   testRearrange
   (
-    &xPixelOpsSTD::AOS4fromSOA3,
+    &xPixelOpsSTD::AOS4fromSOA3, //needsfix
     &xPixelOpsSTD::SOA3fromAOS4
   );
   testCheckIfInRange
@@ -599,7 +599,7 @@ TEST_CASE("xPixelOpsNEON")
   );
   testCountNonZero
   (
-    &xPixelOpsSTD::CountNonZero
+    &xPixelOpsNEON::CountNonZero
   );
   testCompareEqual
   (
