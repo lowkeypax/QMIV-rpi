@@ -735,6 +735,58 @@ void xPixelOpsNEON::CvtDownsampleH(uint8* restrict Dst, const uint16* Src, int32
 }
 bool xPixelOpsNEON::CheckIfInRange(const uint16* Src, int32 SrcStride, int32 Width, int32 Height, int32 BitDepth)
 {
+  if(BitDepth == 16) { return true; }
+
+  const int32   MaxValue  = xBitDepth2MaxValue(BitDepth);
+  const int16x8_t MaxValueV = vdupq_n_s16((int16)MaxValue);
+  
+  if(((uint32)Width & c_RemainderMask16) == 0) //Width%16==0 - fast path without tail
+  {
+    for(int32 y = 0; y < Height; y++)
+    {
+      for(int32 x = 0; x < Width; x += 16)
+      {
+        uint16x8_t SrcV1 = vld1q_u16(&Src[x]);
+        uint16x8_t SrcV2 = vld1q_u16(&Src[x+8]);
+
+        uint16x8_t CmpV1 = vcgtq_u16(SrcV1, vreinterpretq_u16_s16(MaxValueV));
+        uint16x8_t CmpV2 = vcgtq_u16(SrcV2, vreinterpretq_u16_s16(MaxValueV));
+
+        uint16x8_t CombinedCmp = vorrq_u16(CmpV1, CmpV2);
+
+        uint8 result = vmaxvq_u16(CombinedCmp);
+
+        if (result) { return false; }
+      }
+      Src += SrcStride;
+    } //y
+  }
+  else
+  {
+    const int32 Width16 = (int32)((uint32)Width & c_MultipleMask16);
+    for(int32 y = 0; y < Height; y++)
+    {
+      for(int32 x = 0; x < Width16; x += 16)
+      {
+        uint16x8_t SrcV1 = vld1q_u16(&Src[x]);
+        uint16x8_t SrcV2 = vld1q_u16(&Src[x+8]);
+
+        uint16x8_t CmpV1 = vcgtq_u16(SrcV1, vreinterpretq_u16_s16(MaxValueV));
+        uint16x8_t CmpV2 = vcgtq_u16(SrcV2, vreinterpretq_u16_s16(MaxValueV));
+
+        uint16x8_t CombinedCmp = vorrq_u16(CmpV1, CmpV2);
+
+        uint8 result = vmaxvq_u16(CombinedCmp);
+
+        if (result) { return false; }
+      }
+      for (int32 x = Width16; x < Width; x++)
+      {
+        if (Src[x] > MaxValue) { return false; }
+      }
+      Src += SrcStride;
+    } //y
+  }
   return true;
 }
 void xPixelOpsNEON::AOS4fromSOA3(uint16* restrict DstABCD, const uint16* SrcA, const uint16* SrcB, const uint16* SrcC, const uint16 ValueD, int32 DstStride, int32 SrcStride, int32 Width, int32 Height)

@@ -595,7 +595,7 @@ TEST_CASE("xPixelOpsNEON")
   );
   testCheckIfInRange
   (
-    &xPixelOpsSTD::CheckIfInRange
+    &xPixelOpsNEON::CheckIfInRange
   );
   testCountNonZero
   (
