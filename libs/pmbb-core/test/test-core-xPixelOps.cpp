@@ -590,7 +590,7 @@ TEST_CASE("xPixelOpsNEON")
   );
   testRearrange
   (
-    &xPixelOpsSTD::AOS4fromSOA3, //needsfix
+    &xPixelOpsNEON::AOS4fromSOA3, //needsfix
     &xPixelOpsSTD::SOA3fromAOS4
   );
   testCheckIfInRange
@@ -603,7 +603,7 @@ TEST_CASE("xPixelOpsNEON")
   );
   testCompareEqual
   (
-    &xPixelOpsSTD::CompareEqual
+    &xPixelOpsNEON::CompareEqual
   );
   fmt::print("TIME(xPixelOpsNEON) = {}s\n", std::chrono::duration_cast<tDurationS>(tClock::now() - T).count());
 }

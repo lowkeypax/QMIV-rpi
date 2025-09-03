@@ -867,7 +867,7 @@ void xPixelOpsNEON::AOS4fromSOA3(uint16* restrict DstABCD, const uint16* SrcA, c
         vst1_u16(&DstABCD[(x << 2) +  0], abcd0.val[0]);
         vst1_u16(&DstABCD[(x << 2) +  4], abcd0.val[1]);
         vst1_u16(&DstABCD[(x << 2) +  8], abcd1.val[0]);
-        vst1_u16(&DstABCD[(x << 2) + 16], abcd1.val[1]);
+        vst1_u16(&DstABCD[(x << 2) + 12], abcd1.val[1]);
       }
       for(int32 x = Width4; x < Width; x++)
       {
@@ -886,7 +886,57 @@ void xPixelOpsNEON::AOS4fromSOA3(uint16* restrict DstABCD, const uint16* SrcA, c
 }
 void xPixelOpsNEON::SOA3fromAOS4(uint16* restrict DstA, uint16* restrict DstB, uint16* restrict DstC, const uint16* SrcABCD, int32 DstStride, int32 SrcStride, int32 Width, int32 Height)
 {
-  return;
+  if(((uint32)Width & (uint32)c_RemainderMask8)==0) //Width%8==0
+  {
+    for(int32 y=0; y<Height; y++)
+    {
+      for(int32 x=0; x<Width; x+=8)
+      {
+        //load
+        uint16x8x2_t abcd = vld1q_u16_x2
+
+        //transpose
+        
+
+        //save
+        
+      }
+      SrcABCD += SrcStride;
+      DstA    += DstStride;
+      DstB    += DstStride;
+      DstC    += DstStride;
+    }
+  }
+  else
+  {
+    int32 Width8  = (int32)((uint32)Width & (uint32)c_MultipleMask8);
+    int32 Width4  = (int32)((uint32)Width & (uint32)c_MultipleMask4);
+
+    for(int32 y=0; y<Height; y++)
+    {
+      for(int32 x=0; x<Width8; x+=8)
+      {
+        
+      }
+      for(int32 x=Width8; x<Width4; x+=4)
+      {
+        
+      }
+      for(int32 x=Width4; x<Width; x++)
+      {      
+        int16 a = SrcABCD[(x<<2)+0];
+        int16 b = SrcABCD[(x<<2)+1];
+        int16 c = SrcABCD[(x<<2)+2];
+        DstA[x] = a;
+        DstB[x] = b;
+        DstC[x] = c;
+      }
+      SrcABCD += SrcStride;
+      DstA    += DstStride;
+      DstB    += DstStride;
+      DstC    += DstStride;
+    }
+  }
 }
 int32 xPixelOpsNEON::CountNonZero(const uint16* Src, int32 SrcStride, int32 Width, int32 Height)
 {
@@ -960,9 +1010,57 @@ int32 xPixelOpsNEON::CountNonZero(const uint16* Src, int32 SrcStride, int32 Widt
 }
 bool xPixelOpsNEON::CompareEqual(const uint16* Tst, const uint16* Ref, int32 TstStride, int32 RefStride, int32 Width, int32 Height)
 {
-  return 0;
-}
+  if (((uint32)Width & c_RemainderMask8) == 0) // Width % 16 == 0
+  {
+    for (int32 y = 0; y < Height; ++y)
+    {
+      for (int32 x = 0; x < Width; x += 16)
+      {
+        uint16x8_t TstV1 = vld1q_u16(&Tst[x]);
+        uint16x8_t TstV2 = vld1q_u16(&Tst[x + 8]);
+        uint16x8_t RefV1 = vld1q_u16(&Ref[x]);
+        uint16x8_t RefV2 = vld1q_u16(&Ref[x + 8]);
 
+        uint16x8_t CmpV1 = vceqq_u16(TstV1, RefV1);
+        uint16x8_t CmpV2 = vceqq_u16(TstV2, RefV2);
+
+        if (vminvq_u16(CmpV1) != 0xFFFF || vminvq_u16(CmpV2) != 0xFFFF)
+          return false;
+      }
+      Tst += TstStride;
+      Ref += RefStride;
+    }
+  }
+  else
+  {
+    const int32 Width16 = (int32)((uint32)Width & c_MultipleMask16);
+    for (int32 y = 0; y < Height; ++y)
+    {
+      for (int32 x = 0; x < Width16; x += 16)
+      {
+        uint16x8_t TstV1 = vld1q_u16(&Tst[x]);
+        uint16x8_t TstV2 = vld1q_u16(&Tst[x + 8]);
+        uint16x8_t RefV1 = vld1q_u16(&Ref[x]);
+        uint16x8_t RefV2 = vld1q_u16(&Ref[x + 8]);
+
+        uint16x8_t CmpV1 = vceqq_u16(TstV1, RefV1);
+        uint16x8_t CmpV2 = vceqq_u16(TstV2, RefV2);
+
+        if (vminvq_u16(CmpV1) != 0xFFFF || vminvq_u16(CmpV2) != 0xFFFF)
+          return false;
+      }
+      for (int32 x = Width16; x < Width; ++x)
+      {
+        if (Tst[x] != Ref[x])
+          return false;
+      }
+
+      Tst += TstStride;
+      Ref += RefStride;
+    }
+  }
+  return true;
+}
 //===============================================================================================================================================================================================================
 
 } //end of namespace PMBB
