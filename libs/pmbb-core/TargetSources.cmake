@@ -7,8 +7,8 @@ set(SRCLIST_DIST_C                   src/xDistortionSTD.cpp src/xDistortionSSE.c
 set(SRCLIST_PIXOPS_H src/xPixelOps.h src/xPixelOpsBase.h src/xPixelOpsSTD.h   src/xPixelOpsSSE.h   src/xPixelOpsAVX.h   src/xPixelOpsAVX512.h   src/xPixelOpsNEON.h )
 set(SRCLIST_PIXOPS_C                                     src/xPixelOpsSTD.cpp src/xPixelOpsSSE.cpp src/xPixelOpsAVX.cpp src/xPixelOpsAVX512.cpp src/xPixelOpsNEON.cpp)
 
-set(SRCLIST_CLR_H src/xColorSpaceCoeff.h   src/xColorSpace.h   src/xColorSpaceSTD.h   src/xColorSpaceSSE.h   src/xColorSpaceAVX.h   src/xColorSpaceAVX512.h  )
-set(SRCLIST_CLR_C src/xColorSpaceCoeff.cpp src/xColorSpace.cpp src/xColorSpaceSTD.cpp src/xColorSpaceSSE.cpp src/xColorSpaceAVX.cpp src/xColorSpaceAVX512.cpp)
+set(SRCLIST_CLR_H src/xColorSpaceCoeff.h   src/xColorSpace.h   src/xColorSpaceSTD.h   src/xColorSpaceSSE.h   src/xColorSpaceAVX.h   src/xColorSpaceAVX512.h   src/xColorSpaceNEON.h)
+set(SRCLIST_CLR_C src/xColorSpaceCoeff.cpp src/xColorSpace.cpp src/xColorSpaceSTD.cpp src/xColorSpaceSSE.cpp src/xColorSpaceAVX.cpp src/xColorSpaceAVX512.cpp src/xColorSpaceNEON.cpp)
 
 set(SRCLIST_PIC_H src/xPicCommon.h   src/xPic.h   src/xPlane.h  )
 set(SRCLIST_PIC_C src/xPicCommon.cpp src/xPic.cpp src/xPlane.cpp)

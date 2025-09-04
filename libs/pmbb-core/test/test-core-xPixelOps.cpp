@@ -590,8 +590,8 @@ TEST_CASE("xPixelOpsNEON")
   );
   testRearrange
   (
-    &xPixelOpsNEON::AOS4fromSOA3, //needsfix
-    &xPixelOpsSTD::SOA3fromAOS4
+    &xPixelOpsNEON::AOS4fromSOA3,
+    &xPixelOpsNEON::SOA3fromAOS4 //needs fix
   );
   testCheckIfInRange
   (
