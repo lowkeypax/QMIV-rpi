@@ -224,7 +224,7 @@ TEST_CASE("xDistortionSTD")
   fmt::print("TIME(xDistortionSTD   ) = {}s\n", std::chrono::duration_cast<tDurationS>(tClock::now() - T).count());
 }
 
-if X_SIMD_CAN_USE_NEON
+#if X_SIMD_CAN_USE_NEON
 TEST_CASE("xDistortionNEON")
 {
   tTimePoint T = tClock::now();
@@ -237,7 +237,7 @@ TEST_CASE("xDistortionNEON")
     static_cast<uint64(*)(const uint16*, const uint16*, int32                     )>(&xDistortionNEON::CalcSSD),
     static_cast<uint64(*)(const uint16*, const uint16*, int32, int32, int32, int32)>(&xDistortionNEON::CalcSSD)
   );
-  fmt::print("TIME(xDistortionNEON  ) = {}s\n", std::chrono::duration_cast<tDurationS>(tClock::now() - T).count());
+  fmt::print("TIME(xDistortionNEON   ) = {}s\n", std::chrono::duration_cast<tDurationS>(tClock::now() - T).count());
 }
 #endif
 
