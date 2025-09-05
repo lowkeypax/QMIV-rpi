@@ -892,29 +892,33 @@ void xPixelOpsNEON::SOA3fromAOS4(uint16* restrict DstA, uint16* restrict DstB, u
     {
       for(int32 x=0; x<Width; x+=8)
       {
+        //load x4
+        uint16x8x4_t abcd = vld4q_u16(&SrcABCD[(x << 2)]);
+
+        //store every 4th
+        vst1q_u16(&DstA[x], abcd.val[0]); // A0-A7
+        vst1q_u16(&DstB[x], abcd.val[1]); // B0-B7  
+        vst1q_u16(&DstC[x], abcd.val[2]); // C0-C7
+
+        /*
         //load
         uint16x8x2_t abcd0 = vld1q_u16_x2(&SrcABCD[(x<<2)]);
         uint16x8x2_t abcd1 = vld1q_u16_x2(&SrcABCD[(x<<2)+16]);
-
         //transpose
         uint16x8_t aabbccdd00 = vzip1q_u16(abcd0.val[0], abcd0.val[1]);
         uint16x8_t aabbccdd01 = vzip2q_u16(abcd0.val[0], abcd0.val[1]);
         uint16x8_t aabbccdd10 = vzip1q_u16(abcd1.val[0], abcd1.val[1]);
         uint16x8_t aabbccdd11 = vzip2q_u16(abcd1.val[0], abcd1.val[1]);
-
         uint16x8x2_t a4b4xc4d40 = vzipq_u16(aabbccdd00, aabbccdd01);
         uint16x8x2_t a4b4xc4d41 = vzipq_u16(aabbccdd10, aabbccdd11);
-
         uint16x8_t ax8 = vzip1q_u16(a4b4xc4d40.val[0], a4b4xc4d41.val[0]);
         uint16x8_t bx8 = vzip2q_u16(a4b4xc4d40.val[0], a4b4xc4d41.val[0]);
         uint16x8_t cx8 = vzip1q_u16(a4b4xc4d40.val[1], a4b4xc4d41.val[1]);
-        
         //save
-
         vst1q_u16(&DstA[x], ax8);
         vst1q_u16(&DstB[x], bx8);
         vst1q_u16(&DstC[x], cx8);
-        
+        */
       }
       SrcABCD += SrcStride;
       DstA    += DstStride;
@@ -932,52 +936,22 @@ void xPixelOpsNEON::SOA3fromAOS4(uint16* restrict DstA, uint16* restrict DstB, u
       for(int32 x=0; x<Width8; x+=8)
       {
         //load
-        uint16x8x2_t abcd0 = vld1q_u16_x2(&SrcABCD[(x<<2)]);
-        uint16x8x2_t abcd1 = vld1q_u16_x2(&SrcABCD[(x<<2)+16]);
+        uint16x8x4_t abcd = vld4q_u16(&SrcABCD[(x << 2)]);
+        //store
+        vst1q_u16(&DstA[x], abcd.val[0]); // A0-A7
+        vst1q_u16(&DstB[x], abcd.val[1]); // B0-B7  
+        vst1q_u16(&DstC[x], abcd.val[2]); // C0-C7
 
-        //transpose
-        uint16x8_t aabbccdd00 = vzip1q_u16(abcd0.val[0], abcd0.val[1]);
-        uint16x8_t aabbccdd01 = vzip2q_u16(abcd0.val[0], abcd0.val[1]);
-        uint16x8_t aabbccdd10 = vzip1q_u16(abcd1.val[0], abcd1.val[1]);
-        uint16x8_t aabbccdd11 = vzip2q_u16(abcd1.val[0], abcd1.val[1]);
-
-        uint16x8x2_t a4b4xc4d40 = vzipq_u16(aabbccdd00, aabbccdd01);
-        uint16x8x2_t a4b4xc4d41 = vzipq_u16(aabbccdd10, aabbccdd11);
-
-        uint16x8_t ax8 = vzip1q_u16(a4b4xc4d40.val[0], a4b4xc4d41.val[0]);
-        uint16x8_t bx8 = vzip2q_u16(a4b4xc4d40.val[0], a4b4xc4d41.val[0]);
-        uint16x8_t cx8 = vzip1q_u16(a4b4xc4d40.val[1], a4b4xc4d41.val[1]);
-        
-        //save
-
-        vst1q_u16(&DstA[x], ax8);
-        vst1q_u16(&DstB[x], bx8);
-        vst1q_u16(&DstC[x], cx8);
       }
       for(int32 x=Width8; x<Width4; x+=4)
       {
         //load
-        uint16x4x2_t abcd0 = vld1_u16_x2(&SrcABCD[(x<<2)]);
-        uint16x4x2_t abcd1 = vld1_u16_x2(&SrcABCD[(x<<2)+8]);
+        uint16x4x4_t abcd = vld4_u16(&SrcABCD[(x << 2)]);
+        //store
+        vst1_u16(&DstA[x], abcd.val[0]);
+        vst1_u16(&DstB[x], abcd.val[1]);
+        vst1_u16(&DstC[x], abcd.val[2]);
 
-        //transpose
-        uint16x4_t aabbccdd00 = vzip1_u16(abcd0.val[0], abcd0.val[1]);
-        uint16x4_t aabbccdd01 = vzip2_u16(abcd0.val[0], abcd0.val[1]);
-        uint16x4_t aabbccdd10 = vzip1_u16(abcd1.val[0], abcd1.val[1]);
-        uint16x4_t aabbccdd11 = vzip2_u16(abcd1.val[0], abcd1.val[1]);
-
-        uint16x4x2_t a4b4xc4d40 = vzip_u16(aabbccdd00, aabbccdd01);
-        uint16x4x2_t a4b4xc4d41 = vzip_u16(aabbccdd10, aabbccdd11);
-
-        uint16x4_t ax8 = vzip1_u16(a4b4xc4d40.val[0], a4b4xc4d41.val[0]);
-        uint16x4_t bx8 = vzip2_u16(a4b4xc4d40.val[0], a4b4xc4d41.val[0]);
-        uint16x4_t cx8 = vzip1_u16(a4b4xc4d40.val[1], a4b4xc4d41.val[1]);
-        
-        //save
-
-        vst1_u16(&DstA[x], ax8);
-        vst1_u16(&DstB[x], bx8);
-        vst1_u16(&DstC[x], cx8);
       }
       for(int32 x=Width4; x<Width; x++)
       {      

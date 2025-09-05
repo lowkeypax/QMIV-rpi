@@ -146,40 +146,38 @@ void xColorSpaceNEON::ConvertYCbCr2RGB_I32(uint16* restrict R, uint16* restrict 
       uint16x8_t v_U16_V = vld1q_u16((V + x));
       
       //change data format (and remove chroma offset)
-      int32x4_t y_I32_V0 = vsubl_s16     (vreinterpretq_s16_u16    (y_U16_V),  Mid_I32_V);
-      int32x4_t y_I32_V1 = vsubl_high_s16(vreinterpretq_s16_u16   (y_U16_V),  Mid_I32_V);
-      int32x4_t u_I32_V0 = vsubl_s16     (vreinterpretq_s16_u16    (u_U16_V),  Mid_I32_V);
-      int32x4_t u_I32_V1 = vsubl_high_s16(vreinterpretq_s16_u16   (u_U16_V),  Mid_I32_V);
-      int32x4_t v_I32_V0 = vsubl_s16     (vreinterpretq_s16_u16    (v_U16_V),  Mid_I32_V);
-      int32x4_t v_I32_V1 = vsubl_high_s16(vreinterpretq_s16_u16   (v_U16_V),  Mid_I32_V);
+      int32x4_t y_I32_V0 = vmovl_s16(vreinterpret_s16_u16(vget_low_u16(y_U16_V)));
+      int32x4_t y_I32_V1 = vmovl_high_s16(vreinterpretq_s16_u16(y_U16_V));
+      int32x4_t u_I32_V0 = vsubq_s32(vmovl_s16(vreinterpret_s16_u16(vget_low_u16(u_U16_V))), Mid_I32_V);
+      int32x4_t u_I32_V1 = vsubq_s32(vmovl_high_s16(vreinterpretq_s16_u16(u_U16_V)), Mid_I32_V);
+      int32x4_t v_I32_V0 = vsubq_s32(vmovl_s16(vreinterpret_s16_u16(vget_low_u16(v_U16_V))), Mid_I32_V);
+      int32x4_t v_I32_V1 = vsubq_s32(vmovl_high_s16(vreinterpretq_s16_u16(v_U16_V)), Mid_I32_V);
 
       //convert YCbCr --> RGB
       //sy = (iy<<Shr) + Add;
-      int32x4_t sy_V0 = vaddq_s32(vqshlq_n_s32(y_I32_V0, Shr), Add_I32_V);
-      int32x4_t sy_V1 = vaddq_s32(vqshlq_n_s32(y_I32_V1, Shr), Add_I32_V);
+      int32x4_t sy_V0 = vaddq_s32(vshlq_n_s32(y_I32_V0, Shr), Add_I32_V);
+      int32x4_t sy_V1 = vaddq_s32(vshlq_n_s32(y_I32_V1, Shr), Add_I32_V);
 
       //r  = (sy +        + R_V*iv)>>Shr;
-      int32x4_t r_V0 = vrshrq_n_s32(vaddq_s32(sy_V0, vmulq_n_s32(v_I32_V0, R_V)), Shr);
-      int32x4_t r_V1 = vrshrq_n_s32(vaddq_s32(sy_V0, vmulq_n_s32(v_I32_V1, R_V)), Shr);
+      int32x4_t r_V0 = vshrq_n_s32(vaddq_s32(sy_V0, vmulq_n_s32(v_I32_V0, R_V)), Shr);
+      int32x4_t r_V1 = vshrq_n_s32(vaddq_s32(sy_V1, vmulq_n_s32(v_I32_V1, R_V)), Shr);
 
       //g  = (sy + G_U*iu + G_V*iv)>>Shr;
-      int32x4_t g_V0 = vrshrq_n_s32(vaddq_s32(sy_V0, vaddq_s32(vmulq_n_s32(u_I32_V0, G_U), vmulq_n_s32(v_I32_V0, G_V))), Shr);
-      int32x4_t g_V1 = vrshrq_n_s32(vaddq_s32(sy_V1, vaddq_s32(vmulq_n_s32(u_I32_V1, G_U), vmulq_n_s32(v_I32_V0, G_V))), Shr);
+      int32x4_t g_V0 = vshrq_n_s32(vaddq_s32(sy_V0, vaddq_s32(vmulq_n_s32(u_I32_V0, G_U), vmulq_n_s32(v_I32_V0, G_V))), Shr);
+      int32x4_t g_V1 = vshrq_n_s32(vaddq_s32(sy_V1, vaddq_s32(vmulq_n_s32(u_I32_V1, G_U), vmulq_n_s32(v_I32_V1, G_V))), Shr);
 
       //b  = (sy + B_U*iu         )>>Shr;
-      int32x4_t b_V0 = vrshrq_n_s32(vaddq_s32(sy_V0, vmulq_n_s32(u_I32_V0, B_U)), Shr);
-      int32x4_t b_V1 = vrshrq_n_s32(vaddq_s32(sy_V1, vmulq_n_s32(u_I32_V1, B_U)), Shr);
+      int32x4_t b_V0 = vshrq_n_s32(vaddq_s32(sy_V0, vmulq_n_s32(u_I32_V0, B_U)), Shr);
+      int32x4_t b_V1 = vshrq_n_s32(vaddq_s32(sy_V1, vmulq_n_s32(u_I32_V1, B_U)), Shr);
 
-      uint16x8_t r_U16_V = vqmovn_high_u32(vqmovn_u32(vreinterpretq_u32_s32(r_V0)), vreinterpretq_u32_s32(r_V1));
-      uint16x8_t g_U16_V = vqmovn_high_u32(vqmovn_u32(vreinterpretq_u32_s32(g_V0)), vreinterpretq_u32_s32(g_V1));
-      uint16x8_t b_U16_V = vqmovn_high_u32(vqmovn_u32(vreinterpretq_u32_s32(b_V0)), vreinterpretq_u32_s32(b_V1));
-      uint16x8_t cr_V = vminq_u16(r_U16_V, Max_U16_V);
-      uint16x8_t cg_V = vminq_u16(g_U16_V, Max_U16_V);
-      uint16x8_t cb_V = vminq_u16(b_U16_V, Max_U16_V);
+      uint16x8_t r_V = vcombine_u16(vqmovun_s32(r_V0), vqmovun_s32(r_V1));
+      uint16x8_t g_V = vcombine_u16(vqmovun_s32(g_V0), vqmovun_s32(g_V1));
+      uint16x8_t b_V = vcombine_u16(vqmovun_s32(b_V0), vqmovun_s32(b_V1));
+      
       //store
-      vst1q_u16((R + x), cr_V);
-      vst1q_u16((G + x), cg_V);
-      vst1q_u16((B + x), cb_V);
+      vst1q_u16((R + x), r_V);
+      vst1q_u16((G + x), g_V);
+      vst1q_u16((B + x), b_V);
     }
     for(int32 x = Width8; x < Width; x++)
     {
@@ -187,7 +185,7 @@ void xColorSpaceNEON::ConvertYCbCr2RGB_I32(uint16* restrict R, uint16* restrict 
       int32 iu = (int32)(U[x]) - Mid;
       int32 iv = (int32)(V[x]) - Mid;
       int32 sy = (iy<<Shr) + Add;
-      int32 r  = (sy +        + R_V*iv)>>Shr;
+      int32 r  = (sy +         R_V*iv)>>Shr;
       int32 g  = (sy + G_U*iu + G_V*iv)>>Shr;
       int32 b  = (sy + B_U*iu         )>>Shr;
       int32 cr = xClipU(r, Max);
