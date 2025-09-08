@@ -102,6 +102,13 @@ TEST_CASE("xStructSimSTD")
   testCalcBlckAvg(xStructSimSTD::CalcBlckAvg);
 }
 
+#if X_SIMD_CAN_USE_NEON
+TEST_CASE("xStructSimNEON")
+{
+  testCalcBlckAvg(xStructSimNEON::CalcBlckAvg);
+}
+#endif //X_SIMD_CAN_USE_NEON
+
 #if X_SIMD_CAN_USE_SSE
 TEST_CASE("xStructSimSSE")
 {
