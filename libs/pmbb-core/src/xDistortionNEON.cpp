@@ -15,8 +15,8 @@ int32 xDistortionNEON::CalcSD(const uint16* restrict Tst, const uint16* restrict
     {
         uint16x8_t Tst_V128   = vld1q_u16       (&Tst[i]);
         uint16x8_t Ref_V128   = vld1q_u16       (&Ref[i]);
-        int32x4_t Diffl_V128  = vsubl_s16       (vreinterpret_s16_u16(vget_low_u16(Tst_V128)), vreinterpret_s16_u16(vget_low_u16(Ref_V128))); //sub 0-3 to uint32
-        int32x4_t Diffh_V128  = vsubl_high_s16  (vreinterpretq_s16_u16(Tst_V128), vreinterpretq_s16_u16(Ref_V128)); //sub 4-7
+        int32x4_t Diffl_V128  = vsubq_s32       (vreinterpretq_s32_u32(vmovl_u16(vget_low_u16(Tst_V128))), vreinterpretq_s32_u32(vmovl_u16(vget_low_u16(Ref_V128)))); //sub 0-3 to uint32
+        int32x4_t Diffh_V128  = vsubq_s32       (vreinterpretq_s32_u32(vmovl_high_u16(Tst_V128)), vreinterpretq_s32_u32(vmovl_high_u16(Ref_V128))); //sub 4-7
         int32x4_t Sum_V128    = vaddq_s32       (Diffl_V128, Diffh_V128);
         SD_V128               = vaddq_s32       (SD_V128,    Sum_V128);
     }//koniec wierszy
@@ -38,8 +38,8 @@ int32 xDistortionNEON::CalcSD(const uint16* restrict Tst, const uint16* restrict
             {
                 uint16x8_t Tst_V128   = vld1q_u16       (&Tst[x]);
                 uint16x8_t Ref_V128   = vld1q_u16       (&Ref[x]);
-                int32x4_t Diffl_V128  = vsubl_s16       (vreinterpret_s16_u16(vget_low_u16(Tst_V128)), vreinterpret_s16_u16(vget_low_u16(Ref_V128))); //sub 0-3 to uint32
-                int32x4_t Diffh_V128  = vsubl_high_s16  (vreinterpretq_s16_u16(Tst_V128), vreinterpretq_s16_u16(Ref_V128)); //sub 4-7
+                int32x4_t Diffl_V128  = vsubq_s32       (vreinterpretq_s32_u32(vmovl_u16(vget_low_u16(Tst_V128))), vreinterpretq_s32_u32(vmovl_u16(vget_low_u16(Ref_V128)))); //sub 0-3 to uint32
+                int32x4_t Diffh_V128  = vsubq_s32       (vreinterpretq_s32_u32(vmovl_high_u16(Tst_V128)), vreinterpretq_s32_u32(vmovl_high_u16(Ref_V128))); //sub 4-7
                 int32x4_t Sum_V128    = vaddq_s32       (Diffl_V128, Diffh_V128);
                 SD_V128               = vaddq_s32       (SD_V128,    Sum_V128);
             }//x
@@ -60,8 +60,8 @@ int32 xDistortionNEON::CalcSD(const uint16* restrict Tst, const uint16* restrict
             {
                 uint16x8_t Tst_V128   = vld1q_u16       (&Tst[x]);
                 uint16x8_t Ref_V128   = vld1q_u16       (&Ref[x]);
-                int32x4_t Diffl_V128  = vsubl_s16       (vreinterpret_s16_u16(vget_low_u16(Tst_V128)), vreinterpret_s16_u16(vget_low_u16(Ref_V128))); //sub 0-3 to uint32
-                int32x4_t Diffh_V128  = vsubl_high_s16  (vreinterpretq_s16_u16(Tst_V128), vreinterpretq_s16_u16(Ref_V128)); //sub 4-7
+                int32x4_t Diffl_V128  = vsubq_s32       (vreinterpretq_s32_u32(vmovl_u16(vget_low_u16(Tst_V128))), vreinterpretq_s32_u32(vmovl_u16(vget_low_u16(Ref_V128)))); //sub 0-3 to uint32
+                int32x4_t Diffh_V128  = vsubq_s32       (vreinterpretq_s32_u32(vmovl_high_u16(Tst_V128)), vreinterpretq_s32_u32(vmovl_high_u16(Ref_V128))); //sub 4-7
                 int32x4_t Sum_V128    = vaddq_s32       (Diffl_V128, Diffh_V128);
                 SD_V128               = vaddq_s32       (SD_V128,    Sum_V128);
             }//8x
@@ -69,8 +69,8 @@ int32 xDistortionNEON::CalcSD(const uint16* restrict Tst, const uint16* restrict
             {
                 uint16x4_t Tst_V64    = vld1_u16     (&Tst[x]);
                 uint16x4_t Ref_V64    = vld1_u16     (&Ref[x]);
-                int32x4_t  Tst_V128   = vmovl_s16    (vreinterpret_s16_u16(Tst_V64));
-                int32x4_t  Ref_V128   = vmovl_s16    (vreinterpret_s16_u16(Ref_V64));
+                int32x4_t  Tst_V128   = vreinterpretq_s32_u32(vmovl_u16(Tst_V64));
+                int32x4_t  Ref_V128   = vreinterpretq_s32_u32(vmovl_u16(Ref_V64));
                 int32x4_t Diff_V128   = vsubq_s32    (Tst_V128, Ref_V128);
                 SD_V128               = vaddq_s32    (SD_V128, Diff_V128);
             }//4x
@@ -168,8 +168,8 @@ uint64 xDistortionNEON::CalcSSD(const uint16* restrict Tst, const uint16* restri
     {
         uint16x8_t Tst_V    = vld1q_u16     (&Tst[i]);
         uint16x8_t Ref_V    = vld1q_u16     (&Ref[i]);
-        int32x4_t Diffl_V128  = vsubl_s16       (vreinterpret_s16_u16(vget_low_u16(Tst_V)), vreinterpret_s16_u16(vget_low_u16(Ref_V))); 
-        int32x4_t Diffh_V128  = vsubl_high_s16  (vreinterpretq_s16_u16(Tst_V), vreinterpretq_s16_u16(Ref_V));
+        int32x4_t Diffl_V128  = vsubq_s32  (vreinterpretq_s32_u32(vmovl_u16(vget_low_u16(Tst_V))), vreinterpretq_s32_u32(vmovl_u16(vget_low_u16(Ref_V)))); 
+        int32x4_t Diffh_V128  = vsubq_s32  (vreinterpretq_s32_u32(vmovl_high_u16(Tst_V)), vreinterpretq_s32_u32(vmovl_high_u16(Ref_V)));
         
         //multiply accumulate and widen
         Pow_V = vmlal_s32      (Pow_V, vget_low_s32(Diffl_V128),vget_low_s32(Diffl_V128));
@@ -196,8 +196,8 @@ uint64 xDistortionNEON::CalcSSD(const uint16* restrict Tst, const uint16* restri
             {
                 uint16x8_t Tst_V    = vld1q_u16     (&Tst[x]);
                 uint16x8_t Ref_V    = vld1q_u16     (&Ref[x]);
-                int32x4_t Diffl_V128  = vsubl_s16       (vreinterpret_s16_u16(vget_low_u16(Tst_V)), vreinterpret_s16_u16(vget_low_u16(Ref_V))); 
-                int32x4_t Diffh_V128  = vsubl_high_s16  (vreinterpretq_s16_u16(Tst_V), vreinterpretq_s16_u16(Ref_V));
+                int32x4_t Diffl_V128  = vsubq_s32  (vreinterpretq_s32_u32(vmovl_u16(vget_low_u16(Tst_V))), vreinterpretq_s32_u32(vmovl_u16(vget_low_u16(Ref_V)))); 
+                int32x4_t Diffh_V128  = vsubq_s32  (vreinterpretq_s32_u32(vmovl_high_u16(Tst_V)), vreinterpretq_s32_u32(vmovl_high_u16(Ref_V)));
                 
                 //multiply accumulate and widen
                 Pow_V = vmlal_s32      (Pow_V, vget_low_s32(Diffl_V128),vget_low_s32(Diffl_V128));
@@ -222,8 +222,8 @@ uint64 xDistortionNEON::CalcSSD(const uint16* restrict Tst, const uint16* restri
             {
                 uint16x8_t Tst_V    = vld1q_u16     (&Tst[x]);
                 uint16x8_t Ref_V    = vld1q_u16     (&Ref[x]);
-                int32x4_t Diffl_V128  = vsubl_s16       (vreinterpret_s16_u16(vget_low_u16(Tst_V)), vreinterpret_s16_u16(vget_low_u16(Ref_V))); 
-                int32x4_t Diffh_V128  = vsubl_high_s16  (vreinterpretq_s16_u16(Tst_V), vreinterpretq_s16_u16(Ref_V));
+                int32x4_t Diffl_V128  = vsubq_s32  (vreinterpretq_s32_u32(vmovl_u16(vget_low_u16(Tst_V))), vreinterpretq_s32_u32(vmovl_u16(vget_low_u16(Ref_V)))); 
+                int32x4_t Diffh_V128  = vsubq_s32  (vreinterpretq_s32_u32(vmovl_high_u16(Tst_V)), vreinterpretq_s32_u32(vmovl_high_u16(Ref_V)));
                 
                 //multiply accumulate and widen
                 Pow_V = vmlal_s32      (Pow_V, vget_low_s32(Diffl_V128),vget_low_s32(Diffl_V128));
@@ -235,7 +235,7 @@ uint64 xDistortionNEON::CalcSSD(const uint16* restrict Tst, const uint16* restri
             {
                 uint16x4_t Tst_V    = vld1_u16     (&Tst[x]);
                 uint16x4_t Ref_V    = vld1_u16     (&Ref[x]);
-                int32x4_t Diffl_V128  = vsubl_s16 (vreinterpret_s16_u16(Tst_V), vreinterpret_s16_u16(Ref_V)); 
+                int32x4_t Diffl_V128  = vsubq_s32 (vreinterpretq_s32_u32(vmovl_u16(Tst_V)), vreinterpretq_s32_u32(vmovl_u16(Ref_V))); 
                 
                 //multiply accumulate and widen
                 Pow_V = vmlal_s32      (Pow_V, vget_low_s32(Diffl_V128), vget_low_s32(Diffl_V128));

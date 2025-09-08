@@ -41,12 +41,12 @@ void xColorSpaceNEON::ConvertRGB2YCbCr_I32(uint16* restrict Y, uint16* restrict 
       uint16x8_t b_U16_V = vld1q_u16((B + x));
 
       //convert uint16 to int32
-      int32x4_t r_I32_V0 = vmovl_s16(vreinterpret_s16_u16(vget_low_u16(r_U16_V)));
-      int32x4_t r_I32_V1 = vmovl_high_s16(vreinterpretq_s16_u16(r_U16_V));
-      int32x4_t g_I32_V0 = vmovl_s16(vreinterpret_s16_u16(vget_low_u16(g_U16_V)));
-      int32x4_t g_I32_V1 = vmovl_high_s16(vreinterpretq_s16_u16(g_U16_V));
-      int32x4_t b_I32_V0 = vmovl_s16(vreinterpret_s16_u16(vget_low_u16(b_U16_V)));
-      int32x4_t b_I32_V1 = vmovl_high_s16(vreinterpretq_s16_u16(b_U16_V));
+      int32x4_t r_I32_V0 = vreinterpretq_s32_u32(vmovl_u16(vget_low_u16(r_U16_V)));
+      int32x4_t r_I32_V1 = vreinterpretq_s32_u32(vmovl_high_u16(r_U16_V));
+      int32x4_t g_I32_V0 = vreinterpretq_s32_u32(vmovl_u16(vget_low_u16(g_U16_V)));
+      int32x4_t g_I32_V1 = vreinterpretq_s32_u32(vmovl_high_u16(g_U16_V));
+      int32x4_t b_I32_V0 = vreinterpretq_s32_u32(vmovl_u16(vget_low_u16(b_U16_V)));
+      int32x4_t b_I32_V1 = vreinterpretq_s32_u32(vmovl_high_u16(b_U16_V));
 
       //convert RGB --> YCbCr
       //ty = (int32)round(Y_R*r + Y_G*g + Y_B*b);
@@ -132,7 +132,7 @@ void xColorSpaceNEON::ConvertYCbCr2RGB_I32(uint16* restrict R, uint16* restrict 
 
   const int32x4_t Add_I32_V  =  vdupq_n_s32(Add);
   const int32x4_t Mid_I32_V  =  vdupq_n_s32(Mid);
-  const uint16x8_t Max_U16_V =  vdupq_n_u16((uint16)Max);
+  //const uint16x8_t Max_U16_V =  vdupq_n_u16((uint16)Max);
 
 
   const int32 Width8 = (int32)((uint32)Width & c_MultipleMask8);
@@ -146,12 +146,12 @@ void xColorSpaceNEON::ConvertYCbCr2RGB_I32(uint16* restrict R, uint16* restrict 
       uint16x8_t v_U16_V = vld1q_u16((V + x));
       
       //change data format (and remove chroma offset)
-      int32x4_t y_I32_V0 = vmovl_s16(vreinterpret_s16_u16(vget_low_u16(y_U16_V)));
-      int32x4_t y_I32_V1 = vmovl_high_s16(vreinterpretq_s16_u16(y_U16_V));
-      int32x4_t u_I32_V0 = vsubq_s32(vmovl_s16(vreinterpret_s16_u16(vget_low_u16(u_U16_V))), Mid_I32_V);
-      int32x4_t u_I32_V1 = vsubq_s32(vmovl_high_s16(vreinterpretq_s16_u16(u_U16_V)), Mid_I32_V);
-      int32x4_t v_I32_V0 = vsubq_s32(vmovl_s16(vreinterpret_s16_u16(vget_low_u16(v_U16_V))), Mid_I32_V);
-      int32x4_t v_I32_V1 = vsubq_s32(vmovl_high_s16(vreinterpretq_s16_u16(v_U16_V)), Mid_I32_V);
+      int32x4_t y_I32_V0 =           vreinterpretq_s32_u32(vmovl_u16(vget_low_u16(y_U16_V)));
+      int32x4_t y_I32_V1 =           vreinterpretq_s32_u32(vmovl_high_u16(y_U16_V));
+      int32x4_t u_I32_V0 = vsubq_s32(vreinterpretq_s32_u32(vmovl_u16(vget_low_u16(u_U16_V))), Mid_I32_V);
+      int32x4_t u_I32_V1 = vsubq_s32(vreinterpretq_s32_u32(vmovl_high_u16(u_U16_V)), Mid_I32_V);
+      int32x4_t v_I32_V0 = vsubq_s32(vreinterpretq_s32_u32(vmovl_u16(vget_low_u16(v_U16_V))), Mid_I32_V);
+      int32x4_t v_I32_V1 = vsubq_s32(vreinterpretq_s32_u32(vmovl_high_u16(v_U16_V)), Mid_I32_V);
 
       //convert YCbCr --> RGB
       //sy = (iy<<Shr) + Add;

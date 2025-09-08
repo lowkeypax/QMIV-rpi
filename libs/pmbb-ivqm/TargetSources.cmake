@@ -9,8 +9,8 @@ set(SRCLIST_WS_C src/xWeightedSpherically.cpp)
 set(SRCLIST_GCD_H src/xGlobClrDiff.h  )
 set(SRCLIST_GCD_C src/xGlobClrDiff.cpp)
 
-set(SRCLIST_CPS_H src/xCorrespPixelShift.h   src/xCorrespPixelShiftSTD.h   src/xCorrespPixelShiftSSE.h   src/xShftCompPic.h  )
-set(SRCLIST_CPS_C src/xCorrespPixelShift.cpp src/xCorrespPixelShiftSTD.cpp src/xCorrespPixelShiftSSE.cpp src/xShftCompPic.cpp)
+set(SRCLIST_CPS_H src/xCorrespPixelShift.h   src/xCorrespPixelShiftNEON.h   src/xCorrespPixelShiftSTD.h   src/xCorrespPixelShiftSSE.h   src/xShftCompPic.h  )
+set(SRCLIST_CPS_C src/xCorrespPixelShift.cpp src/xCorrespPixelShiftNEON.cpp src/xCorrespPixelShiftSTD.cpp src/xCorrespPixelShiftSSE.cpp src/xShftCompPic.cpp)
 
 set(SRCLIST_IVPSNR_H src/xPSNR.h   src/xWSPSNR.h   src/xIVPSNR.h   )
 set(SRCLIST_IVPSNR_C src/xPSNR.cpp src/xWSPSNR.cpp src/xIVPSNR.cpp )

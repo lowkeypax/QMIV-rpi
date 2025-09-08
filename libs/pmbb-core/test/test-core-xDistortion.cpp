@@ -23,6 +23,10 @@ static const std::vector<int32> c_Margs = { 0, 4, 32 };
 static const std::vector<int32> c_Cntrs = { 1, 256, 1024, 4096 };
 static constexpr int32          c_Max   = 16383;
 
+
+static const int32 c_PerfUnitSize = 128;
+static const int32 c_PerfNumIters = 3;
+
 //===============================================================================================================================================================================================================
 
 void testDistortion(
@@ -207,6 +211,53 @@ void testDistortion(
 }
 
 
+std::tuple<flt64, flt64> perfDistortion(std::function<int64(const uint16*, const uint16*, int32)>DistArea, std::function<int64(const uint16*, const uint16*, int32, int32, int32, int32)>DistStride)
+{
+  const int32V2 Size = { c_PerfUnitSize, c_PerfUnitSize };
+  const int64   Area = c_PerfUnitSize * c_PerfUnitSize;
+
+  tPlane* PL = new tPlane(Size, 14, 0);
+  tPlane* PU = new tPlane(Size, 14, 0);
+
+  uint32 State = xTestUtils::c_XorShiftSeed;
+
+  uint32 OrgState = State;
+  State = xTestUtils::fillMidNoise(PL->getAddr(), PL->getStride(), PL->getWidth(), PL->getHeight(), PL->getBitDepth(), 0, OrgState);
+  State = xTestUtils::fillMidNoise(PU->getAddr(), PU->getStride(), PU->getWidth(), PU->getHeight(), PU->getBitDepth(), 1, OrgState);
+
+  tDuration AT = (tDuration)0;
+  tDuration ST = (tDuration)0;
+
+  //warmup
+  {
+    int64 ResultA = DistArea  (PU->getAddr(), PL->getAddr(), PU->getArea()                                                    );
+    int64 ResultS = DistStride(PU->getAddr(), PL->getAddr(), PU->getStride(), PL->getStride(), PU->getWidth(), PU->getHeight());
+    CHECK(ResultA == Area);
+    CHECK(ResultS == Area);
+  }
+
+  //measure
+  for(int32 j = 0; j < c_PerfNumIters; j++)
+  {
+    tTimePoint T0 = tClock::now();
+    int64 ResultA = DistArea  (PU->getAddr(), PL->getAddr(), PU->getArea()                                                    );
+    tTimePoint T1 = tClock::now();
+    int64 ResultS = DistStride(PU->getAddr(), PL->getAddr(), PU->getStride(), PL->getStride(), PU->getWidth(), PU->getHeight());
+    tTimePoint T2 = tClock::now();
+    CHECK(ResultA == Area);
+    CHECK(ResultS == Area);
+    AT += T1 - T0;
+    ST += T2 - T1;
+  }
+
+  int64 NumBytes      = (int64)c_PerfUnitSize * (int64)c_PerfUnitSize * (int64)c_PerfNumIters * sizeof(int16);
+  flt64 BytesPerSecAT = NumBytes / std::chrono::duration_cast<tDurationS>(AT).count();
+  flt64 BytesPerSecST = NumBytes / std::chrono::duration_cast<tDurationS>(ST).count();
+
+  return { BytesPerSecAT, BytesPerSecST };
+}
+
+
 //===============================================================================================================================================================================================================
 
 TEST_CASE("xDistortionSTD")
@@ -291,3 +342,16 @@ TEST_CASE("xDistortionAVX512")
   fmt::print("TIME(xDistortionAVX512) = {}s\n", std::chrono::duration_cast<tDurationS>(tClock::now() - T).count());
 }
 #endif
+
+//performance tests
+
+TEST_CASE("xDistortionSTD-perf")
+{
+  auto [AT, ST] = perfDistortion
+  (
+    static_cast<int32 (*)(const uint16*, const uint16*, int32                     )>(&xDistortionSTD::CalcSD ),
+    static_cast<int32 (*)(const uint16*, const uint16*, int32, int32, int32, int32)>(&xDistortionSTD::CalcSD )
+  );
+  fmt::print("TIME(xDistortionSTD::CalcSD) = {:.2f} MiB/s\n", AT / (1024 * 1024));
+  fmt::print("TIME(xDistortionSTD::CalcSD) = {:.2f} MiB/s\n", ST / (1024 * 1024));
+}
