@@ -2,8 +2,8 @@
     "version": 8,
     "configurePresets": [
         {
-            "name": "GCC 14.2.0 aarch64-linux-gnu",
-            "displayName": "GCC 14.2.0 aarch64-linux-gnu",
+            "name": "GCC 14.2.0 aarch64-linux-gnu DEBUG",
+            "displayName": "GCC DEBUG",
             "description": "Using compilers: C = /usr/bin/aarch64-linux-gnu-gcc, CXX = /usr/bin/aarch64-linux-gnu-g++",
             "binaryDir": "${sourceDir}/out/build/${presetName}",
             "cacheVariables": {
@@ -15,8 +15,8 @@
             }
         },
         {
-            "name": "Clang 20.1.2 aarch64-unknown-linux-gnu",
-            "displayName": "Clang 20.1.2 aarch64-unknown-linux-gnu",
+            "name": "Clang 20.1.2 aarch64-unknown-linux-gnu DEBUG",
+            "displayName": "Clang DEBUG",
             "description": "Using compilers: C = /usr/bin/clang, CXX = /usr/bin/clang++",
             "binaryDir": "${sourceDir}/out/build/${presetName}",
             "cacheVariables": {
@@ -26,6 +26,30 @@
                 "CMAKE_BUILD_TYPE": "Debug",
                 "PMBB_GENERATE_TESTING": "True"
             }
+        },
+        {
+            "name": "GCC 14.2.0 aarch64-linux-gnu RELEASE",
+            "displayName": "GCC RELEASE",
+            "description": "Using compilers: C = /usr/bin/aarch64-linux-gnu-gcc, CXX = /usr/bin/aarch64-linux-gnu-g++",
+            "binaryDir": "${sourceDir}/out/build/${presetName}",
+            "cacheVariables": {
+                "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}",
+                "CMAKE_C_COMPILER": "/usr/bin/aarch64-linux-gnu-gcc",
+                "CMAKE_CXX_COMPILER": "/usr/bin/aarch64-linux-gnu-g++",
+                "CMAKE_BUILD_TYPE": "Release"
+            }
+        },
+        {
+            "name": "Clang 20.1.2 aarch64-unknown-linux-gnu RELEASE",
+            "displayName": "Clang RELEASE",
+            "description": "Using compilers: C = /usr/bin/clang, CXX = /usr/bin/clang++",
+            "binaryDir": "${sourceDir}/out/build/${presetName}",
+            "cacheVariables": {
+                "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}",
+                "CMAKE_C_COMPILER": "/usr/bin/clang",
+                "CMAKE_CXX_COMPILER": "/usr/bin/clang++",
+                "CMAKE_BUILD_TYPE": "Release"
+            }
         }
     ],
     "buildPresets": [
@@ -33,7 +57,7 @@
             "name": "gcc",
             "description": "",
             "displayName": "",
-            "configurePreset": "GCC 14.2.0 aarch64-linux-gnu"
+            "configurePreset": "GCC 14.2.0 aarch64-linux-gnu DEBUG"
         }
     ],
     "testPresets": [
@@ -41,8 +65,7 @@
             "name": "testgcc",
             "description": "",
             "displayName": "",
-            "configurePreset": "GCC 14.2.0 aarch64-linux-gnu"
-
+            "configurePreset": "GCC 14.2.0 aarch64-linux-gnu DEBUG"
         }
     ]
 }

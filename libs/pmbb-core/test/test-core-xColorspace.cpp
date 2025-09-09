@@ -151,6 +151,7 @@ std::tuple<flt64, flt64> perfColorSpace(
   constexpr int32 NumIters = 4;
   constexpr int32 NumPels  = 1024;
   INFO("WARNING: performance evaluation results are useless when build in debug mode");
+  printf("WARNING: performance evaluation results are useless when build in debug mode");
 #endif  
   constexpr int64 BuffSize = NumPels * sizeof(uint16);
 

@@ -23,12 +23,13 @@ uint64V4 xCorrespPixelShiftNEON::CalcDistAsymmetricRow(const xPicI* Tst, const x
   const int32x4_t CmpWeightsV       = vld1q_s32(CmpWeights.getElementsPtr());
   const int32x4_t GlobalColorShiftV = vld1q_s32(GlobalColorShift.getElementsPtr());
 
-  const uint16V4* TstPtr = Tst->getAddr() + TstOffset;
+  //printf("a");
+  const uint16V4* TstPtr = Tst->getAddr() + TstOffset; //pierwszy 16v4 wektor obrazu
   int32x4_t RowDistV = vdupq_n_s32(0);
   for (int32 x = 0; x < Width; x++)
   {
-    uint16x4_t TstU16V  = vld1_u16(TstPtr->getElementsPtr() + x);
-    int32x4_t  TstV     = vaddq_s32(GlobalColorShiftV, vreinterpretq_s32_u32(vmovl_u16(TstU16V))); //TODO - xc_CLIP_CURR_TST_RANGE
+    uint16x4_t TstU16V  = vld1_u16((TstPtr + x)->getElementsPtr()); //x-owy 4-elementowy pixel, getElemPtr() wskazuje wewnatrz na pierwszy z elementow, wrzuca do 16x4
+    int32x4_t  TstV     = vaddq_s32(GlobalColorShiftV, vreinterpretq_s32_u32(vmovl_u16(TstU16V))); 
     int32x4_t BestDist = xCalcDistWithinBlock(TstV, Ref, x, y, SearchRange, CmpWeightsV);
     RowDistV = vaddq_s32(RowDistV, BestDist);
   }//x
@@ -43,28 +44,29 @@ int32x4_t xCorrespPixelShiftNEON::xCalcDistWithinBlock(const int32x4_t& TstPelV,
   const int32 BegY = CenterY - SearchRange;
   const int32 BegX = CenterX - SearchRange;
 
-  const int32     Stride = Ref->getStride();
-  const uint16V4* RefPtr = Ref->getAddr() + BegY * Stride + BegX;
-
-  int32   BestError = std::numeric_limits<int32>::max();
+  //const uint16V4* RefPtr = Ref->getAddr();
+  const int32     Stride = Ref->getStride(); 
+  const uint16V4* RefPtrBeg = Ref->getAddr() + Stride*BegY + BegX; // adres poczatku obrazu + xy = adres poczatku okna
+                                                                   // wskazuje na 4 elementowe pixele obrazu
+  int32 BestError = std::numeric_limits<int32>::max();
   int32x4_t BestDistV = vdupq_n_s32(0);
 
-  for (int32 y = 0; y < WindowSize; y++)
+  for(int32 y = BegY; y < WindowSize; y++)
   {
-    const uint16V4* RefPtrY = RefPtr + y * Stride;
-    for (int32 x = 0; x < WindowSize; x++)
+    //const uint16V4* Offset = RefPtrBeg + y*Stride;
+    for(int32 x = BegX; x<= WindowSize; x++)
     {
-      uint16x4_t RefU16V = vld1_u16(RefPtrY->getElementsPtr() + x);
-    //__m128i RefV    = _mm_unpacklo_epi16(RefU16V, _mm_setzero_si128());
-      int32x4_t RefV     = vreinterpretq_s32_u32(vmovl_u16(RefU16V));
-      int32x4_t DiffV    = vsubq_s32  (TstPelV, RefV);
-      int32x4_t DistV    = vmulq_s32(DiffV, DiffV);
-      int32x4_t ErrorV   = vmulq_s32(DistV, CmpWeightsV);
-      int32   Error   = vaddvq_s32(ErrorV);
-      if (Error < BestError) { BestError = Error; BestDistV = DistV; }
-    } //x
-  } //y
-
+      uint16x4_t RefV16 = vld1_u16((RefPtrBeg + y*Stride + x)->getElementsPtr()); // adres poczatku okna + yx = liczony pixel w oknie
+                                                                                  //getElements() wskazuje na pierwszy z 4 elementow pixela, wrzuca do 16x4
+      //uint16x4_t RefV16 = vld1_u16((Offset + x)->getElementsPtr());
+      int32x4_t RefV = vreinterpretq_s32_u32(vmovl_u16(RefV16));
+      int32x4_t Diff = vsubq_s32(TstPelV, RefV); //tst32x4 - ref32x4
+      int32x4_t Dist = vmulq_s32(Diff, Diff);    //^2
+      int32x4_t ErrorV = vmulq_s32(Dist, CmpWeightsV); 
+      int32 Error = vaddvq_s32(ErrorV);          // Error = suma[(tst-ref)^2*waga]
+      if (Error < BestError) { BestError = Error; BestDistV = Dist; }
+    }
+  }
   return BestDistV;
 }
 
