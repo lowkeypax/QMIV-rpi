@@ -27,6 +27,9 @@ static constexpr int32          c_DefBitDepth    = 14;
 static constexpr int32          c_DefMaxValue    = (1<<c_DefBitDepth) - 1;
 static constexpr int32          c_NumRandomTests = 8;
 
+
+static const int32 c_PerfUnitSize = 155;
+static const int32 c_PerfNumIters = 10;
 //===============================================================================================================================================================================================================
 
 void testCopy()
@@ -139,6 +142,52 @@ void testCvt(
     }
   }
 }
+
+std::tuple<flt64, flt64> perfCvt(
+  std::function<void(uint16*, const uint8* , int32, int32, int32, int32)>CvtU8toU16,
+  std::function<void(uint8* , const uint16*, int32, int32, int32, int32)>CvtU16toU8
+  )
+{
+  const int32V2 Size = { c_PerfUnitSize, c_PerfUnitSize };
+
+  xPlane<uint16>* Src = new xPlane<uint16>(Size, 8, 0);
+  xPlane<uint8 >* Imm = new xPlane<uint8 >(Size, 8, 0);
+  xPlane<uint16>* Dst = new xPlane<uint16>(Size, 8, 0);
+
+  uint32 State;
+  State = xTestUtils::fillMidNoise(Src->getAddr(), Src->getStride(), Src->getWidth(), Src->getHeight(), Src->getBitDepth(), 0);
+  Imm->fill(0);
+  Dst->fill(0);
+
+  tDuration AT = (tDuration)0;
+  tDuration BT = (tDuration)0;
+
+  //warmup
+  CvtU16toU8(Imm->getAddr(), Src->getAddr(), Imm->getStride(), Src->getStride(), Imm->getWidth(), Imm->getHeight());
+  CvtU8toU16(Dst->getAddr(), Imm->getAddr(), Dst->getStride(), Imm->getStride(), Dst->getWidth(), Dst->getHeight());
+  CHECK(xTestUtils::isSameBuffer(Src->getBuffer(), Dst->getBuffer(), Dst->getBuffNumPels(), true));
+
+  //measure
+  for(int32 j = 0; j < c_PerfNumIters; j++)
+  {
+    tTimePoint T0 = tClock::now();
+    CvtU16toU8(Imm->getAddr(), Src->getAddr(), Imm->getStride(), Src->getStride(), Imm->getWidth(), Imm->getHeight());                                              
+    tTimePoint T1 = tClock::now();
+    CvtU8toU16(Dst->getAddr(), Imm->getAddr(), Dst->getStride(), Imm->getStride(), Dst->getWidth(), Dst->getHeight());
+    tTimePoint T2 = tClock::now();
+    CHECK(xTestUtils::isSameBuffer(Src->getBuffer(), Dst->getBuffer(), Dst->getBuffNumPels(), true));
+
+    AT += T1 - T0;
+    BT += T2 - T1;
+  }
+
+  int64 NumBytes      = (int64)c_PerfUnitSize * (int64)c_PerfUnitSize * (int64)c_PerfNumIters * sizeof(int16);
+  flt64 BytesPerSecAT = NumBytes / std::chrono::duration_cast<tDurationS>(AT).count();
+  flt64 BytesPerSecBT = NumBytes / std::chrono::duration_cast<tDurationS>(BT).count();
+
+  return { BytesPerSecAT, BytesPerSecBT };
+}
+
 
 void testResample(
   std::function<void(uint16*, const uint16*, int32, int32, int32, int32)>Upsample,
@@ -777,3 +826,26 @@ TEST_CASE("xPixelOpsAVX512")
   fmt::print("TIME(xPixelOpsAVX512) = {}s\n", std::chrono::duration_cast<tDurationS>(tClock::now() - T).count());
 }
 #endif
+
+
+//performance tests
+TEST_CASE("xPixelOpsSTD")
+{
+  auto [AT1, BT1] = perfCvt
+  (
+    static_cast<void(*)(uint16*, const uint8* , int32, int32, int32, int32)>(&xPixelOpsSTD::Cvt),
+    static_cast<void(*)(uint8* , const uint16*, int32, int32, int32, int32)>(&xPixelOpsSTD::Cvt)
+  );
+  fmt::print("TIME(xPixelOpsSTD::Cvt) = {:.2f} MiB/s\n", AT1 / (1024 * 1024));
+  fmt::print("TIME(xPixelOpsSTD::Cvt) = {:.2f} MiB/s\n", BT1 / (1024 * 1024)); 
+}
+TEST_CASE("xPixelOpsNEON")
+{
+  auto [AT1, BT1] = perfCvt
+  (
+    static_cast<void(*)(uint16*, const uint8* , int32, int32, int32, int32)>(&xPixelOpsNEON::Cvt),
+    static_cast<void(*)(uint8* , const uint16*, int32, int32, int32, int32)>(&xPixelOpsNEON::Cvt)
+  );
+  fmt::print("TIME(xPixelOpsNEON::Cvt) = {:.2f} MiB/s\n", AT1 / (1024 * 1024));
+  fmt::print("TIME(xPixelOpsNEON::Cvt) = {:.2f} MiB/s\n", BT1 / (1024 * 1024)); 
+}
