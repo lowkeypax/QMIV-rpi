@@ -275,6 +275,39 @@ TEST_CASE("xDistortionSTD")
   fmt::print("TIME(xDistortionSTD   ) = {}s\n", std::chrono::duration_cast<tDurationS>(tClock::now() - T).count());
 }
 
+TEST_CASE("xDistortionSTD-SD-perf")
+{
+  auto [AT1, ST1] = perfDistortion
+  (
+    static_cast<int32 (*)(const uint16*, const uint16*, int32                     )>(&xDistortionSTD::CalcSD ),
+    static_cast<int32 (*)(const uint16*, const uint16*, int32, int32, int32, int32)>(&xDistortionSTD::CalcSD )
+  );
+  fmt::print("TIME(xDistortionSTD::CalcSD) = {:.2f} MiB/s\n", AT1 / (1024 * 1024));
+  fmt::print("TIME(xDistortionSTD::CalcSD) = {:.2f} MiB/s\n", ST1 / (1024 * 1024)); 
+}
+
+TEST_CASE("xDistortionSTD-SAD-perf")
+{
+  auto [AT2, ST2] = perfDistortion
+  (
+    static_cast<uint32(*)(const uint16*, const uint16*, int32                     )>(&xDistortionSTD::CalcSAD),
+    static_cast<uint32(*)(const uint16*, const uint16*, int32, int32, int32, int32)>(&xDistortionSTD::CalcSAD)
+  );
+  fmt::print("TIME(xDistortionSTD::CalcSAD) = {:.2f} MiB/s\n", AT2 / (1024 * 1024));
+  fmt::print("TIME(xDistortionSTD::CalcSAD) = {:.2f} MiB/s\n", ST2 / (1024 * 1024));
+}
+
+TEST_CASE("xDistortionSTD-SSD-perf")
+{
+  auto [AT3, ST3] = perfDistortion
+  (
+    static_cast<uint64 (*)(const uint16*, const uint16*, int32                     )>(&xDistortionSTD::CalcSSD ),
+    static_cast<uint64 (*)(const uint16*, const uint16*, int32, int32, int32, int32)>(&xDistortionSTD::CalcSSD )
+  );
+  fmt::print("TIME(xDistortionSTD::CalcSSD) = {:.2f} MiB/s\n", AT3 / (1024 * 1024));
+  fmt::print("TIME(xDistortionSTD::CalcSSD) = {:.2f} MiB/s\n", ST3 / (1024 * 1024));
+}
+
 #if X_SIMD_CAN_USE_NEON
 TEST_CASE("xDistortionNEON")
 {
@@ -289,6 +322,39 @@ TEST_CASE("xDistortionNEON")
     static_cast<uint64(*)(const uint16*, const uint16*, int32, int32, int32, int32)>(&xDistortionNEON::CalcSSD)
   );
   fmt::print("TIME(xDistortionNEON   ) = {}s\n", std::chrono::duration_cast<tDurationS>(tClock::now() - T).count());
+}
+
+TEST_CASE("xDistortionNEON-SD-perf")
+{
+  auto [AT1, ST1] = perfDistortion
+  (
+    static_cast<int32 (*)(const uint16*, const uint16*, int32                     )>(&xDistortionNEON::CalcSD ),
+    static_cast<int32 (*)(const uint16*, const uint16*, int32, int32, int32, int32)>(&xDistortionNEON::CalcSD )
+  );
+  fmt::print("TIME(xDistortionNEON::CalcSD) = {:.2f} MiB/s\n", AT1 / (1024 * 1024));
+  fmt::print("TIME(xDistortionNEON::CalcSD) = {:.2f} MiB/s\n", ST1 / (1024 * 1024)); 
+}
+
+TEST_CASE("xDistortionNEON-SAD-perf")
+{
+  auto [AT2, ST2] = perfDistortion
+  (
+    static_cast<uint32(*)(const uint16*, const uint16*, int32                     )>(&xDistortionNEON::CalcSAD),
+    static_cast<uint32(*)(const uint16*, const uint16*, int32, int32, int32, int32)>(&xDistortionNEON::CalcSAD)
+  );
+  fmt::print("TIME(xDistortionNEON::CalcSAD) = {:.2f} MiB/s\n", AT2 / (1024 * 1024));
+  fmt::print("TIME(xDistortionNEON::CalcSAD) = {:.2f} MiB/s\n", ST2 / (1024 * 1024));
+}
+
+TEST_CASE("xDistortionNEON-SSD-perf")
+{
+  auto [AT3, ST3] = perfDistortion
+  (
+    static_cast<uint64 (*)(const uint16*, const uint16*, int32                     )>(&xDistortionNEON::CalcSSD ),
+    static_cast<uint64 (*)(const uint16*, const uint16*, int32, int32, int32, int32)>(&xDistortionNEON::CalcSSD )
+  );
+  fmt::print("TIME(xDistortionNEON::CalcSSD) = {:.2f} MiB/s\n", AT3 / (1024 * 1024));
+  fmt::print("TIME(xDistortionNEON::CalcSSD) = {:.2f} MiB/s\n", ST3 / (1024 * 1024));
 }
 #endif
 
@@ -342,71 +408,3 @@ TEST_CASE("xDistortionAVX512")
   fmt::print("TIME(xDistortionAVX512) = {}s\n", std::chrono::duration_cast<tDurationS>(tClock::now() - T).count());
 }
 #endif
-
-//performance tests
-
-TEST_CASE("xDistortionSTD-SD-perf")
-{
-  auto [AT1, ST1] = perfDistortion
-  (
-    static_cast<int32 (*)(const uint16*, const uint16*, int32                     )>(&xDistortionSTD::CalcSD ),
-    static_cast<int32 (*)(const uint16*, const uint16*, int32, int32, int32, int32)>(&xDistortionSTD::CalcSD )
-  );
-  fmt::print("TIME(xDistortionSTD::CalcSD) = {:.2f} MiB/s\n", AT1 / (1024 * 1024));
-  fmt::print("TIME(xDistortionSTD::CalcSD) = {:.2f} MiB/s\n", ST1 / (1024 * 1024)); 
-}
-
-TEST_CASE("xDistortionSTD-SAD-perf")
-{
-  auto [AT2, ST2] = perfDistortion
-  (
-    static_cast<uint32(*)(const uint16*, const uint16*, int32                     )>(&xDistortionSTD::CalcSAD),
-    static_cast<uint32(*)(const uint16*, const uint16*, int32, int32, int32, int32)>(&xDistortionSTD::CalcSAD)
-  );
-  fmt::print("TIME(xDistortionSTD::CalcSAD) = {:.2f} MiB/s\n", AT2 / (1024 * 1024));
-  fmt::print("TIME(xDistortionSTD::CalcSAD) = {:.2f} MiB/s\n", ST2 / (1024 * 1024));
-}
-
-TEST_CASE("xDistortionSTD-SSD-perf")
-{
-  auto [AT3, ST3] = perfDistortion
-  (
-    static_cast<uint64 (*)(const uint16*, const uint16*, int32                     )>(&xDistortionSTD::CalcSSD ),
-    static_cast<uint64 (*)(const uint16*, const uint16*, int32, int32, int32, int32)>(&xDistortionSTD::CalcSSD )
-  );
-  fmt::print("TIME(xDistortionSTD::CalcSSD) = {:.2f} MiB/s\n", AT3 / (1024 * 1024));
-  fmt::print("TIME(xDistortionSTD::CalcSSD) = {:.2f} MiB/s\n", ST3 / (1024 * 1024));
-}
-
-TEST_CASE("xDistortionNEON-SD-perf")
-{
-  auto [AT1, ST1] = perfDistortion
-  (
-    static_cast<int32 (*)(const uint16*, const uint16*, int32                     )>(&xDistortionNEON::CalcSD ),
-    static_cast<int32 (*)(const uint16*, const uint16*, int32, int32, int32, int32)>(&xDistortionNEON::CalcSD )
-  );
-  fmt::print("TIME(xDistortionNEON::CalcSD) = {:.2f} MiB/s\n", AT1 / (1024 * 1024));
-  fmt::print("TIME(xDistortionNEON::CalcSD) = {:.2f} MiB/s\n", ST1 / (1024 * 1024)); 
-}
-
-TEST_CASE("xDistortionNEON-SAD-perf")
-{
-  auto [AT2, ST2] = perfDistortion
-  (
-    static_cast<uint32(*)(const uint16*, const uint16*, int32                     )>(&xDistortionNEON::CalcSAD),
-    static_cast<uint32(*)(const uint16*, const uint16*, int32, int32, int32, int32)>(&xDistortionNEON::CalcSAD)
-  );
-  fmt::print("TIME(xDistortionNEON::CalcSAD) = {:.2f} MiB/s\n", AT2 / (1024 * 1024));
-  fmt::print("TIME(xDistortionNEON::CalcSAD) = {:.2f} MiB/s\n", ST2 / (1024 * 1024));
-}
-
-TEST_CASE("xDistortionNEON-SSD-perf")
-{
-  auto [AT3, ST3] = perfDistortion
-  (
-    static_cast<uint64 (*)(const uint16*, const uint16*, int32                     )>(&xDistortionNEON::CalcSSD ),
-    static_cast<uint64 (*)(const uint16*, const uint16*, int32, int32, int32, int32)>(&xDistortionNEON::CalcSSD )
-  );
-  fmt::print("TIME(xDistortionNEON::CalcSSD) = {:.2f} MiB/s\n", AT3 / (1024 * 1024));
-  fmt::print("TIME(xDistortionNEON::CalcSSD) = {:.2f} MiB/s\n", ST3 / (1024 * 1024));
-}

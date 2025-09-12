@@ -879,6 +879,67 @@ TEST_CASE("xPixelOpsSTD")
   fmt::print("TIME(xPixelOpsSTD) = {}s\n", std::chrono::duration_cast<tDurationS>(tClock::now() - T).count());
 }
 
+TEST_CASE("xPixelOpsSTD-perf")
+{
+  auto [AT1, BT1] = perfCvt(
+      static_cast<void (*)(uint16 *, const uint8 *, int32, int32, int32, int32)>(&xPixelOpsSTD::Cvt),
+      static_cast<void (*)(uint8 *, const uint16 *, int32, int32, int32, int32)>(&xPixelOpsSTD::Cvt));
+  fmt::print("TIME(xPixelOpsSTD::Cvt) = {:.2f} MiB/s\n", AT1 / (1024 * 1024));
+  fmt::print("TIME(xPixelOpsSTD::Cvt) = {:.2f} MiB/s\n", BT1 / (1024 * 1024));
+
+  auto [AT2, BT2] = perfResample(
+      static_cast<void (*)(uint16 *, const uint16 *, int32, int32, int32, int32)>(&xPixelOpsSTD::UpsampleHV),
+      static_cast<void (*)(uint16 *, const uint16 *, int32, int32, int32, int32)>(&xPixelOpsSTD::DownsampleHV),
+      {2, 2});
+  fmt::print("TIME(xPixelOpsSTD::UpsampleHV) = {:.2f} MiB/s\n", AT2 / (1024 * 1024));
+  fmt::print("TIME(xPixelOpsSTD::DownsampleHV) = {:.2f} MiB/s\n", BT2 / (1024 * 1024));
+
+  auto [AT3, BT3] = perfCvtResample(
+      static_cast<void (*)(uint8 *, const uint16 *, int32, int32, int32, int32)>(&xPixelOpsSTD::Cvt),
+      static_cast<void (*)(uint16 *, const uint8 *, int32, int32, int32, int32)>(&xPixelOpsSTD::CvtUpsampleHV),
+      static_cast<void (*)(uint8 *, const uint16 *, int32, int32, int32, int32)>(&xPixelOpsSTD::CvtDownsampleHV),
+      {2, 2});
+  fmt::print("TIME(xPixelOpsSTD::CvtUpsampleHV) = {:.2f} MiB/s\n", AT3 / (1024 * 1024));
+  fmt::print("TIME(xPixelOpsSTD::CvtDownsampleHV) = {:.2f} MiB/s\n", BT3 / (1024 * 1024));
+
+  auto [AT21, BT21] = perfResample(
+      static_cast<void (*)(uint16 *, const uint16 *, int32, int32, int32, int32)>(&xPixelOpsSTD::UpsampleH),
+      static_cast<void (*)(uint16 *, const uint16 *, int32, int32, int32, int32)>(&xPixelOpsSTD::DownsampleH),
+      {2, 1});
+  fmt::print("TIME(xPixelOpsSTD::UpsampleH) = {:.2f} MiB/s\n", AT21 / (1024 * 1024));
+  fmt::print("TIME(xPixelOpsSTD::DownsampleH) = {:.2f} MiB/s\n", BT21 / (1024 * 1024));
+
+  auto [AT32, BT32] = perfCvtResample(
+      static_cast<void (*)(uint8 *, const uint16 *, int32, int32, int32, int32)>(&xPixelOpsSTD::Cvt),
+      static_cast<void (*)(uint16 *, const uint8 *, int32, int32, int32, int32)>(&xPixelOpsSTD::CvtUpsampleH),
+      static_cast<void (*)(uint8 *, const uint16 *, int32, int32, int32, int32)>(&xPixelOpsSTD::CvtDownsampleH),
+      {2, 1});
+  fmt::print("TIME(xPixelOpsSTD::UpsampleH) = {:.2f} MiB/s\n", AT32 / (1024 * 1024));
+  fmt::print("TIME(xPixelOpsSTD::DownsampleH) = {:.2f} MiB/s\n", BT32 / (1024 * 1024));
+
+  auto [AT4, BT4] = perfRearrange(
+      &xPixelOpsSTD::AOS4fromSOA3,
+      &xPixelOpsSTD::SOA3fromAOS4);
+  fmt::print("TIME(xPixelOpsSTD::AOS4fromSOA3) = {:.2f} MiB/s\n", AT4 / (1024 * 1024));
+  fmt::print("TIME(xPixelOpsSTD::SOA3fromAOS4) = {:.2f} MiB/s\n", BT4 / (1024 * 1024));
+
+  auto T = perfCheckIfInRange(
+      &xPixelOpsSTD::CheckIfInRange);
+  fmt::print("TIME(xPixelOpsSTD::CheckIfInRange) = {:.2f} MiB/s\n", T / (1024 * 1024));
+
+  auto [T1, T2, T3] = perfCountNonZero(
+      &xPixelOpsSTD::CountNonZero);
+  fmt::print("TIME(xPixelOpsSTD::CountNonZero0) = {:.2f} MiB/s\n", T1 / (1024 * 1024));
+  fmt::print("TIME(xPixelOpsSTD::CountNonZero1) = {:.2f} MiB/s\n", T2 / (1024 * 1024));
+  fmt::print("TIME(xPixelOpsSTD::CountNonZeroN) = {:.2f} MiB/s\n", T3 / (1024 * 1024));
+  
+  auto [AT7, BT7] = perfCompareEqual(
+      &xPixelOpsSTD::CompareEqual);
+  fmt::print("TIME(xPixelOpsSTD::CompareEqualT) = {:.2f} MiB/s\n", AT7 / (1024 * 1024));
+  fmt::print("TIME(xPixelOpsSTD::CompareEqualF) = {:.2f} MiB/s\n", BT7 / (1024 * 1024));
+  
+}
+
 #if X_SIMD_CAN_USE_NEON
 TEST_CASE("xPixelOpsNEON")
 {
@@ -915,6 +976,66 @@ TEST_CASE("xPixelOpsNEON")
   testCompareEqual(
       &xPixelOpsNEON::CompareEqual);
   fmt::print("TIME(xPixelOpsNEON) = {}s\n", std::chrono::duration_cast<tDurationS>(tClock::now() - T).count());
+}
+
+TEST_CASE("xPixelOpsNEON-perf")
+{
+  auto [AT1, BT1] = perfCvt(
+      static_cast<void (*)(uint16 *, const uint8 *, int32, int32, int32, int32)>(&xPixelOpsNEON::Cvt),
+      static_cast<void (*)(uint8 *, const uint16 *, int32, int32, int32, int32)>(&xPixelOpsNEON::Cvt));
+  fmt::print("TIME(xPixelOpsNEON::Cvt) = {:.2f} MiB/s\n", AT1 / (1024 * 1024));
+  fmt::print("TIME(xPixelOpsNEON::Cvt) = {:.2f} MiB/s\n", BT1 / (1024 * 1024));
+
+  auto [AT2, BT2] = perfResample(
+      static_cast<void (*)(uint16 *, const uint16 *, int32, int32, int32, int32)>(&xPixelOpsNEON::UpsampleHV),
+      static_cast<void (*)(uint16 *, const uint16 *, int32, int32, int32, int32)>(&xPixelOpsNEON::DownsampleHV),
+      {2, 2});
+  fmt::print("TIME(xPixelOpsNEON::UpsampleHV) = {:.2f} MiB/s\n", AT2 / (1024 * 1024));
+  fmt::print("TIME(xPixelOpsNEON::DownsampleHV) = {:.2f} MiB/s\n", BT2 / (1024 * 1024));
+
+  auto [AT3, BT3] = perfCvtResample(
+      static_cast<void (*)(uint8 *, const uint16 *, int32, int32, int32, int32)>(&xPixelOpsNEON::Cvt),
+      static_cast<void (*)(uint16 *, const uint8 *, int32, int32, int32, int32)>(&xPixelOpsNEON::CvtUpsampleHV),
+      static_cast<void (*)(uint8 *, const uint16 *, int32, int32, int32, int32)>(&xPixelOpsNEON::CvtDownsampleHV),
+      {2, 2});
+  fmt::print("TIME(xPixelOpsNEON::CvtUpsampleHV) = {:.2f} MiB/s\n", AT3 / (1024 * 1024));
+  fmt::print("TIME(xPixelOpsNEON::CvtDownsampleHV) = {:.2f} MiB/s\n", BT3 / (1024 * 1024));
+
+  auto [AT21, BT21] = perfResample(
+      static_cast<void (*)(uint16 *, const uint16 *, int32, int32, int32, int32)>(&xPixelOpsNEON::UpsampleH),
+      static_cast<void (*)(uint16 *, const uint16 *, int32, int32, int32, int32)>(&xPixelOpsNEON::DownsampleH),
+      {2, 1});
+  fmt::print("TIME(xPixelOpsNEON::UpsampleH) = {:.2f} MiB/s\n", AT21 / (1024 * 1024));
+  fmt::print("TIME(xPixelOpsNEON::DownsampleH) = {:.2f} MiB/s\n", BT21 / (1024 * 1024));
+
+  auto [AT32, BT32] = perfCvtResample(
+      static_cast<void (*)(uint8 *, const uint16 *, int32, int32, int32, int32)>(&xPixelOpsNEON::Cvt),
+      static_cast<void (*)(uint16 *, const uint8 *, int32, int32, int32, int32)>(&xPixelOpsNEON::CvtUpsampleH),
+      static_cast<void (*)(uint8 *, const uint16 *, int32, int32, int32, int32)>(&xPixelOpsNEON::CvtDownsampleH),
+      {2, 1});
+  fmt::print("TIME(xPixelOpsNEON::UpsampleH) = {:.2f} MiB/s\n", AT32 / (1024 * 1024));
+  fmt::print("TIME(xPixelOpsNEON::DownsampleH) = {:.2f} MiB/s\n", BT32 / (1024 * 1024));
+
+  auto [AT4, BT4] = perfRearrange(
+      &xPixelOpsNEON::AOS4fromSOA3,
+      &xPixelOpsNEON::SOA3fromAOS4);
+  fmt::print("TIME(xPixelOpsNEON::AOS4fromSOA3) = {:.2f} MiB/s\n", AT4 / (1024 * 1024));
+  fmt::print("TIME(xPixelOpsNEON::SOA3fromAOS4) = {:.2f} MiB/s\n", BT4 / (1024 * 1024));
+
+  auto T = perfCheckIfInRange(
+      &xPixelOpsNEON::CheckIfInRange);
+  fmt::print("TIME(xPixelOpsNEON::CheckIfInRange) = {:.2f} MiB/s\n", T / (1024 * 1024));
+
+  auto [T1, T2, T3] = perfCountNonZero(
+      &xPixelOpsNEON::CountNonZero);
+  fmt::print("TIME(xPixelOpsNEON::CountNonZero0) = {:.2f} MiB/s\n", T1 / (1024 * 1024));
+  fmt::print("TIME(xPixelOpsNEON::CountNonZero1) = {:.2f} MiB/s\n", T2 / (1024 * 1024));
+  fmt::print("TIME(xPixelOpsNEON::CountNonZeroN) = {:.2f} MiB/s\n", T3 / (1024 * 1024));
+
+  auto [AT7, BT7] = perfCompareEqual(
+      &xPixelOpsNEON::CompareEqual);
+  fmt::print("TIME(xPixelOpsNEON::CompareEqualT) = {:.2f} MiB/s\n", AT7 / (1024 * 1024));
+  fmt::print("TIME(xPixelOpsNEON::CompareEqualF) = {:.2f} MiB/s\n", BT7 / (1024 * 1024));
 }
 #endif
 
@@ -1036,127 +1157,3 @@ TEST_CASE("xPixelOpsAVX512")
   fmt::print("TIME(xPixelOpsAVX512) = {}s\n", std::chrono::duration_cast<tDurationS>(tClock::now() - T).count());
 }
 #endif
-
-// performance tests
-TEST_CASE("xPixelOpsSTD")
-{
-  auto [AT1, BT1] = perfCvt(
-      static_cast<void (*)(uint16 *, const uint8 *, int32, int32, int32, int32)>(&xPixelOpsSTD::Cvt),
-      static_cast<void (*)(uint8 *, const uint16 *, int32, int32, int32, int32)>(&xPixelOpsSTD::Cvt));
-  fmt::print("TIME(xPixelOpsSTD::Cvt) = {:.2f} MiB/s\n", AT1 / (1024 * 1024));
-  fmt::print("TIME(xPixelOpsSTD::Cvt) = {:.2f} MiB/s\n", BT1 / (1024 * 1024));
-
-  auto [AT2, BT2] = perfResample(
-      static_cast<void (*)(uint16 *, const uint16 *, int32, int32, int32, int32)>(&xPixelOpsSTD::UpsampleHV),
-      static_cast<void (*)(uint16 *, const uint16 *, int32, int32, int32, int32)>(&xPixelOpsSTD::DownsampleHV),
-      {2, 2});
-  fmt::print("TIME(xPixelOpsSTD::UpsampleHV) = {:.2f} MiB/s\n", AT2 / (1024 * 1024));
-  fmt::print("TIME(xPixelOpsSTD::DownsampleHV) = {:.2f} MiB/s\n", BT2 / (1024 * 1024));
-
-  auto [AT3, BT3] = perfCvtResample(
-      static_cast<void (*)(uint8 *, const uint16 *, int32, int32, int32, int32)>(&xPixelOpsSTD::Cvt),
-      static_cast<void (*)(uint16 *, const uint8 *, int32, int32, int32, int32)>(&xPixelOpsSTD::CvtUpsampleHV),
-      static_cast<void (*)(uint8 *, const uint16 *, int32, int32, int32, int32)>(&xPixelOpsSTD::CvtDownsampleHV),
-      {2, 2});
-  fmt::print("TIME(xPixelOpsSTD::CvtUpsampleHV) = {:.2f} MiB/s\n", AT3 / (1024 * 1024));
-  fmt::print("TIME(xPixelOpsSTD::CvtDownsampleHV) = {:.2f} MiB/s\n", BT3 / (1024 * 1024));
-
-  auto [AT21, BT21] = perfResample(
-      static_cast<void (*)(uint16 *, const uint16 *, int32, int32, int32, int32)>(&xPixelOpsSTD::UpsampleH),
-      static_cast<void (*)(uint16 *, const uint16 *, int32, int32, int32, int32)>(&xPixelOpsSTD::DownsampleH),
-      {2, 1});
-  fmt::print("TIME(xPixelOpsSTD::UpsampleH) = {:.2f} MiB/s\n", AT21 / (1024 * 1024));
-  fmt::print("TIME(xPixelOpsSTD::DownsampleH) = {:.2f} MiB/s\n", BT21 / (1024 * 1024));
-
-  auto [AT32, BT32] = perfCvtResample(
-      static_cast<void (*)(uint8 *, const uint16 *, int32, int32, int32, int32)>(&xPixelOpsSTD::Cvt),
-      static_cast<void (*)(uint16 *, const uint8 *, int32, int32, int32, int32)>(&xPixelOpsSTD::CvtUpsampleH),
-      static_cast<void (*)(uint8 *, const uint16 *, int32, int32, int32, int32)>(&xPixelOpsSTD::CvtDownsampleH),
-      {2, 1});
-  fmt::print("TIME(xPixelOpsSTD::UpsampleH) = {:.2f} MiB/s\n", AT32 / (1024 * 1024));
-  fmt::print("TIME(xPixelOpsSTD::DownsampleH) = {:.2f} MiB/s\n", BT32 / (1024 * 1024));
-
-  auto [AT4, BT4] = perfRearrange(
-      &xPixelOpsSTD::AOS4fromSOA3,
-      &xPixelOpsSTD::SOA3fromAOS4);
-  fmt::print("TIME(xPixelOpsSTD::AOS4fromSOA3) = {:.2f} MiB/s\n", AT4 / (1024 * 1024));
-  fmt::print("TIME(xPixelOpsSTD::SOA3fromAOS4) = {:.2f} MiB/s\n", BT4 / (1024 * 1024));
-
-  auto T = perfCheckIfInRange(
-      &xPixelOpsSTD::CheckIfInRange);
-  fmt::print("TIME(xPixelOpsSTD::CheckIfInRange) = {:.2f} MiB/s\n", T / (1024 * 1024));
-
-  auto [T1, T2, T3] = perfCountNonZero(
-      &xPixelOpsSTD::CountNonZero);
-  fmt::print("TIME(xPixelOpsSTD::CountNonZero0) = {:.2f} MiB/s\n", T1 / (1024 * 1024));
-  fmt::print("TIME(xPixelOpsSTD::CountNonZero1) = {:.2f} MiB/s\n", T2 / (1024 * 1024));
-  fmt::print("TIME(xPixelOpsSTD::CountNonZeroN) = {:.2f} MiB/s\n", T3 / (1024 * 1024));
-  
-  auto [AT7, BT7] = perfCompareEqual(
-      &xPixelOpsSTD::CompareEqual);
-  fmt::print("TIME(xPixelOpsSTD::CompareEqualT) = {:.2f} MiB/s\n", AT7 / (1024 * 1024));
-  fmt::print("TIME(xPixelOpsSTD::CompareEqualF) = {:.2f} MiB/s\n", BT7 / (1024 * 1024));
-  
-}
-
-
-
-TEST_CASE("xPixelOpsNEON")
-{
-  auto [AT1, BT1] = perfCvt(
-      static_cast<void (*)(uint16 *, const uint8 *, int32, int32, int32, int32)>(&xPixelOpsNEON::Cvt),
-      static_cast<void (*)(uint8 *, const uint16 *, int32, int32, int32, int32)>(&xPixelOpsNEON::Cvt));
-  fmt::print("TIME(xPixelOpsNEON::Cvt) = {:.2f} MiB/s\n", AT1 / (1024 * 1024));
-  fmt::print("TIME(xPixelOpsNEON::Cvt) = {:.2f} MiB/s\n", BT1 / (1024 * 1024));
-
-  auto [AT2, BT2] = perfResample(
-      static_cast<void (*)(uint16 *, const uint16 *, int32, int32, int32, int32)>(&xPixelOpsNEON::UpsampleHV),
-      static_cast<void (*)(uint16 *, const uint16 *, int32, int32, int32, int32)>(&xPixelOpsNEON::DownsampleHV),
-      {2, 2});
-  fmt::print("TIME(xPixelOpsNEON::UpsampleHV) = {:.2f} MiB/s\n", AT2 / (1024 * 1024));
-  fmt::print("TIME(xPixelOpsNEON::DownsampleHV) = {:.2f} MiB/s\n", BT2 / (1024 * 1024));
-
-  auto [AT3, BT3] = perfCvtResample(
-      static_cast<void (*)(uint8 *, const uint16 *, int32, int32, int32, int32)>(&xPixelOpsNEON::Cvt),
-      static_cast<void (*)(uint16 *, const uint8 *, int32, int32, int32, int32)>(&xPixelOpsNEON::CvtUpsampleHV),
-      static_cast<void (*)(uint8 *, const uint16 *, int32, int32, int32, int32)>(&xPixelOpsNEON::CvtDownsampleHV),
-      {2, 2});
-  fmt::print("TIME(xPixelOpsNEON::CvtUpsampleHV) = {:.2f} MiB/s\n", AT3 / (1024 * 1024));
-  fmt::print("TIME(xPixelOpsNEON::CvtDownsampleHV) = {:.2f} MiB/s\n", BT3 / (1024 * 1024));
-
-  auto [AT21, BT21] = perfResample(
-      static_cast<void (*)(uint16 *, const uint16 *, int32, int32, int32, int32)>(&xPixelOpsNEON::UpsampleH),
-      static_cast<void (*)(uint16 *, const uint16 *, int32, int32, int32, int32)>(&xPixelOpsNEON::DownsampleH),
-      {2, 1});
-  fmt::print("TIME(xPixelOpsNEON::UpsampleH) = {:.2f} MiB/s\n", AT21 / (1024 * 1024));
-  fmt::print("TIME(xPixelOpsNEON::DownsampleH) = {:.2f} MiB/s\n", BT21 / (1024 * 1024));
-
-  auto [AT32, BT32] = perfCvtResample(
-      static_cast<void (*)(uint8 *, const uint16 *, int32, int32, int32, int32)>(&xPixelOpsNEON::Cvt),
-      static_cast<void (*)(uint16 *, const uint8 *, int32, int32, int32, int32)>(&xPixelOpsNEON::CvtUpsampleH),
-      static_cast<void (*)(uint8 *, const uint16 *, int32, int32, int32, int32)>(&xPixelOpsNEON::CvtDownsampleH),
-      {2, 1});
-  fmt::print("TIME(xPixelOpsNEON::UpsampleH) = {:.2f} MiB/s\n", AT32 / (1024 * 1024));
-  fmt::print("TIME(xPixelOpsNEON::DownsampleH) = {:.2f} MiB/s\n", BT32 / (1024 * 1024));
-
-  auto [AT4, BT4] = perfRearrange(
-      &xPixelOpsNEON::AOS4fromSOA3,
-      &xPixelOpsNEON::SOA3fromAOS4);
-  fmt::print("TIME(xPixelOpsNEON::AOS4fromSOA3) = {:.2f} MiB/s\n", AT4 / (1024 * 1024));
-  fmt::print("TIME(xPixelOpsNEON::SOA3fromAOS4) = {:.2f} MiB/s\n", BT4 / (1024 * 1024));
-
-  auto T = perfCheckIfInRange(
-      &xPixelOpsNEON::CheckIfInRange);
-  fmt::print("TIME(xPixelOpsNEON::CheckIfInRange) = {:.2f} MiB/s\n", T / (1024 * 1024));
-
-  auto [T1, T2, T3] = perfCountNonZero(
-      &xPixelOpsNEON::CountNonZero);
-  fmt::print("TIME(xPixelOpsNEON::CountNonZero0) = {:.2f} MiB/s\n", T1 / (1024 * 1024));
-  fmt::print("TIME(xPixelOpsNEON::CountNonZero1) = {:.2f} MiB/s\n", T2 / (1024 * 1024));
-  fmt::print("TIME(xPixelOpsNEON::CountNonZeroN) = {:.2f} MiB/s\n", T3 / (1024 * 1024));
-
-  auto [AT7, BT7] = perfCompareEqual(
-      &xPixelOpsNEON::CompareEqual);
-  fmt::print("TIME(xPixelOpsNEON::CompareEqualT) = {:.2f} MiB/s\n", AT7 / (1024 * 1024));
-  fmt::print("TIME(xPixelOpsNEON::CompareEqualF) = {:.2f} MiB/s\n", BT7 / (1024 * 1024));
-}
