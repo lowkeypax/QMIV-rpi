@@ -27,8 +27,8 @@ static constexpr int32 c_DefBitDepth = 14;
 static constexpr int32 c_DefMaxValue = (1 << c_DefBitDepth) - 1;
 static constexpr int32 c_NumRandomTests = 8;
 
-static const int32 c_PerfUnitSize = 512;
-static const int32 c_PerfNumIters = 1000;
+static const int32 c_PerfUnitSize = 1170;
+static const int32 c_PerfNumIters = 100;
 static const int32 c_PerfBitDep = 14; // for checkifinrange
 //===============================================================================================================================================================================================================
 
@@ -152,8 +152,7 @@ std::tuple<flt64, flt64> perfCvt(
   xPlane<uint8> *Imm = new xPlane<uint8>(Size, 8, 0);
   xPlane<uint16> *Dst = new xPlane<uint16>(Size, 8, 0);
 
-  uint32 State;
-  State = xTestUtils::fillMidNoise(Src->getAddr(), Src->getStride(), Src->getWidth(), Src->getHeight(), Src->getBitDepth(), 0);
+  uint32 State = xTestUtils::fillMidNoise(Src->getAddr(), Src->getStride(), Src->getWidth(), Src->getHeight(), Src->getBitDepth(), 0);
   Imm->fill(0);
   Dst->fill(0);
 
@@ -182,6 +181,10 @@ std::tuple<flt64, flt64> perfCvt(
   int64 NumBytes = (int64)c_PerfUnitSize * (int64)c_PerfUnitSize * (int64)c_PerfNumIters * sizeof(int16);
   flt64 BytesPerSecAT = NumBytes / std::chrono::duration_cast<tDurationS>(AT).count();
   flt64 BytesPerSecBT = NumBytes / std::chrono::duration_cast<tDurationS>(BT).count();
+
+  delete Src;
+  delete Imm;
+  delete Dst;
 
   return {BytesPerSecAT, BytesPerSecBT};
 }
@@ -251,8 +254,7 @@ std::tuple<flt64, flt64> perfResample(
   xPlane<uint16> *Imm = new xPlane<uint16>(ImmSize, 14, 0);
   xPlane<uint16> *Dst = new xPlane<uint16>(Size, 14, 0);
 
-  uint32 State;
-  State = xTestUtils::fillMidNoise(Src->getAddr(), Src->getStride(), Src->getWidth(), Src->getHeight(), Src->getBitDepth(), 0);
+  uint32 State = xTestUtils::fillMidNoise(Src->getAddr(), Src->getStride(), Src->getWidth(), Src->getHeight(), Src->getBitDepth(), 0);
   Imm->fill(0);
   Dst->fill(0);
 
@@ -280,6 +282,10 @@ std::tuple<flt64, flt64> perfResample(
   int64 NumBytes = (int64)c_PerfUnitSize * (int64)c_PerfUnitSize * (int64)c_PerfNumIters * sizeof(int16);
   flt64 BytesPerSecAT = NumBytes / std::chrono::duration_cast<tDurationS>(AT).count();
   flt64 BytesPerSecBT = NumBytes / std::chrono::duration_cast<tDurationS>(BT).count();
+
+  delete Src;
+  delete Imm;
+  delete Dst;
 
   return {BytesPerSecAT, BytesPerSecBT};
 }
@@ -386,6 +392,11 @@ std::tuple<flt64, flt64> perfCvtResample(
   int64 NumBytes = (int64)c_PerfUnitSize * (int64)c_PerfUnitSize * (int64)c_PerfNumIters * sizeof(int16);
   flt64 BytesPerSecAT = NumBytes / std::chrono::duration_cast<tDurationS>(AT).count();
   flt64 BytesPerSecBT = NumBytes / std::chrono::duration_cast<tDurationS>(BT).count();
+
+  delete Pre;
+  delete Src;
+  delete Imm;
+  delete Dst;
 
   return {BytesPerSecAT, BytesPerSecBT};
 }
@@ -509,6 +520,10 @@ for(int32 j = 0; j < c_PerfNumIters; j++)
   flt64 BytesPerSecAT = NumBytes / std::chrono::duration_cast<tDurationS>(AT).count();
   flt64 BytesPerSecBT = NumBytes / std::chrono::duration_cast<tDurationS>(BT).count();
 
+  delete SrcP;
+  delete ImmI;
+  delete DstP;
+
   return {BytesPerSecAT, BytesPerSecBT};
 }
 
@@ -595,6 +610,8 @@ flt64 perfCheckIfInRange(std::function<bool(const uint16 *, int32, int32, int32,
   int64 NumBytes      = (int64)c_PerfUnitSize * (int64)c_PerfUnitSize * (int64)c_PerfNumIters * sizeof(int16);
   flt64 BytesPerSecT = NumBytes / std::chrono::duration_cast<tDurationS>(AT).count();
 
+  delete P;
+
   return BytesPerSecT;
 }
 
@@ -656,6 +673,66 @@ void testCountNonZero(std::function<int32(const uint16 *, int32, int32, int32)> 
   }
 }
 
+std::tuple<flt64, flt64, flt64> perfCountNonZero(std::function<int32(const uint16 *, int32, int32, int32)> CountNonZero)
+{
+  //same 0
+  //midnoise??
+  //brak 0
+
+  const int32V2 Size = { c_PerfUnitSize, c_PerfUnitSize };
+  const int32   Area = c_PerfUnitSize * c_PerfUnitSize;
+
+  xPlane<uint16> *P0 = new xPlane<uint16>(Size, 14, 0);
+  xPlane<uint16> *P1 = new xPlane<uint16>(Size, 14, 0);
+  xPlane<uint16> *P = new xPlane<uint16>(Size, 14, 0);
+
+
+  P0->fill(0);
+  P1->fill(5);
+  uint32 State = xTestUtils::fillMidNoise(P->getAddr(), P->getStride(), P->getWidth(), P->getHeight(), P->getBitDepth(), 0);
+
+  tDuration TZ = (tDuration)0;
+  tDuration TO = (tDuration)0;
+  tDuration TN = (tDuration)0;
+
+
+  //warmup
+  CHECK(CountNonZero(P0->getAddr(), P0->getStride(), P0->getWidth(), P0->getHeight()) == 0);
+  CHECK(CountNonZero(P1->getAddr(), P1->getStride(), P1->getWidth(), P1->getHeight()) == Area);
+  CHECK(CountNonZero(P->getAddr(), P->getStride(), P->getWidth(), P->getHeight()) == CountNonZero(P->getAddr(), P->getStride(), P->getWidth(), P->getHeight()));
+
+  //measure
+  for(int32 j = 0; j < c_PerfNumIters; j++)
+  {
+    tTimePoint T0 = tClock::now();
+    int32 ResultZ = CountNonZero(P0->getAddr(), P0->getStride(), P0->getWidth(), P0->getHeight());
+    tTimePoint T1 = tClock::now();
+    int32 ResultO = CountNonZero(P1->getAddr(), P1->getStride(), P1->getWidth(), P1->getHeight());
+    tTimePoint T2 = tClock::now();
+    int32 ResultN = CountNonZero(P->getAddr(), P->getStride(), P->getWidth(), P->getHeight());
+    tTimePoint T3 = tClock::now();
+    CHECK(ResultZ == 0);
+    CHECK(ResultO == Area);
+    CHECK(ResultN == ResultN);
+
+    TZ += T1 - T0;
+    TO += T2 - T1;
+    TN += T3 - T2;
+  }
+
+  int64 NumBytes      = (int64)c_PerfUnitSize * (int64)c_PerfUnitSize * (int64)c_PerfNumIters * sizeof(int16);
+  flt64 BytesPerSecTZ = NumBytes / std::chrono::duration_cast<tDurationS>(TZ).count();
+  flt64 BytesPerSecTO = NumBytes / std::chrono::duration_cast<tDurationS>(TO).count();
+  flt64 BytesPerSecTN = NumBytes / std::chrono::duration_cast<tDurationS>(TN).count();
+  
+  //
+  delete P;
+  delete P0;
+  delete P1;
+
+  return { BytesPerSecTZ, BytesPerSecTO, BytesPerSecTN };
+}
+
 void testCompareEqual(std::function<bool(const uint16 *, const uint16 *, int32, int32, int32, int32)> CompareEqual)
 {
   for (const int32 y : c_Dimms)
@@ -713,6 +790,49 @@ void testCompareEqual(std::function<bool(const uint16 *, const uint16 *, int32, 
     }
   }
 }
+
+std::tuple<flt64, flt64> perfCompareEqual(std::function<bool(const uint16 *, const uint16 *, int32, int32, int32, int32)> CompareEqual)
+{
+  const int32V2 Size = { c_PerfUnitSize, c_PerfUnitSize };
+
+
+  xPlane<uint16> *R = new xPlane<uint16>(Size, 14, 0);
+  xPlane<uint16> *TF = new xPlane<uint16>(Size, 14, 0);
+  xPlane<uint16> *TT = new xPlane<uint16>(Size, 14, 0);
+
+
+  R->fill(0);
+  TT->fill(0);
+  TF->fill(10);
+
+  tDuration Tt = (tDuration)0;
+  tDuration Tf = (tDuration)0;
+
+
+  CHECK(CompareEqual(TT->getAddr(), R->getAddr(), TT->getStride(), R->getStride(), R->getWidth(), R->getHeight()) == true);
+  CHECK(CompareEqual(TF->getAddr(), R->getAddr(), TF->getStride(), R->getStride(), R->getWidth(), R->getHeight()) == false);
+
+  //measure
+  for(int32 j = 0; j < c_PerfNumIters; j++)
+  {
+    tTimePoint T0 = tClock::now();
+    bool ResultA = CompareEqual(TT->getAddr(), R->getAddr(), TT->getStride(), R->getStride(), R->getWidth(), R->getHeight());
+    tTimePoint T1 = tClock::now();
+    bool ResultS = CompareEqual(TF->getAddr(), R->getAddr(), TF->getStride(), R->getStride(), R->getWidth(), R->getHeight());
+    tTimePoint T2 = tClock::now();
+    CHECK(ResultA == true);
+    CHECK(ResultS == false);
+    Tt += T1 - T0;
+    Tf += T2 - T1;
+  }
+
+  int64 NumBytes      = (int64)c_PerfUnitSize * (int64)c_PerfUnitSize * (int64)c_PerfNumIters * sizeof(int16);
+  flt64 BytesPerSecTT = NumBytes / std::chrono::duration_cast<tDurationS>(Tt).count();
+  flt64 BytesPerSecTF = NumBytes / std::chrono::duration_cast<tDurationS>(Tf).count();
+
+  return { BytesPerSecTT, BytesPerSecTF };
+}
+
 
 //===============================================================================================================================================================================================================
 
@@ -965,8 +1085,22 @@ TEST_CASE("xPixelOpsSTD")
   auto T = perfCheckIfInRange(
       &xPixelOpsSTD::CheckIfInRange);
   fmt::print("TIME(xPixelOpsSTD::CheckIfInRange) = {:.2f} MiB/s\n", T / (1024 * 1024));
+
+  auto [T1, T2, T3] = perfCountNonZero(
+      &xPixelOpsSTD::CountNonZero);
+  fmt::print("TIME(xPixelOpsSTD::CountNonZero0) = {:.2f} MiB/s\n", T1 / (1024 * 1024));
+  fmt::print("TIME(xPixelOpsSTD::CountNonZero1) = {:.2f} MiB/s\n", T2 / (1024 * 1024));
+  fmt::print("TIME(xPixelOpsSTD::CountNonZeroN) = {:.2f} MiB/s\n", T3 / (1024 * 1024));
+  
+  auto [AT7, BT7] = perfCompareEqual(
+      &xPixelOpsSTD::CompareEqual);
+  fmt::print("TIME(xPixelOpsSTD::CompareEqualT) = {:.2f} MiB/s\n", AT7 / (1024 * 1024));
+  fmt::print("TIME(xPixelOpsSTD::CompareEqualF) = {:.2f} MiB/s\n", BT7 / (1024 * 1024));
   
 }
+
+
+
 TEST_CASE("xPixelOpsNEON")
 {
   auto [AT1, BT1] = perfCvt(
@@ -1014,4 +1148,15 @@ TEST_CASE("xPixelOpsNEON")
   auto T = perfCheckIfInRange(
       &xPixelOpsNEON::CheckIfInRange);
   fmt::print("TIME(xPixelOpsNEON::CheckIfInRange) = {:.2f} MiB/s\n", T / (1024 * 1024));
+
+  auto [T1, T2, T3] = perfCountNonZero(
+      &xPixelOpsNEON::CountNonZero);
+  fmt::print("TIME(xPixelOpsNEON::CountNonZero0) = {:.2f} MiB/s\n", T1 / (1024 * 1024));
+  fmt::print("TIME(xPixelOpsNEON::CountNonZero1) = {:.2f} MiB/s\n", T2 / (1024 * 1024));
+  fmt::print("TIME(xPixelOpsNEON::CountNonZeroN) = {:.2f} MiB/s\n", T3 / (1024 * 1024));
+
+  auto [AT7, BT7] = perfCompareEqual(
+      &xPixelOpsNEON::CompareEqual);
+  fmt::print("TIME(xPixelOpsNEON::CompareEqualT) = {:.2f} MiB/s\n", AT7 / (1024 * 1024));
+  fmt::print("TIME(xPixelOpsNEON::CompareEqualF) = {:.2f} MiB/s\n", BT7 / (1024 * 1024));
 }
