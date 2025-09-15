@@ -27,8 +27,8 @@ static constexpr int32 c_DefBitDepth = 14;
 static constexpr int32 c_DefMaxValue = (1 << c_DefBitDepth) - 1;
 static constexpr int32 c_NumRandomTests = 8;
 
-static const int32 c_PerfUnitSize = 1170;
-static const int32 c_PerfNumIters = 100;
+static const int32 c_PerfUnitSize = 532;
+static const int32 c_PerfNumIters = 5;
 static const int32 c_PerfBitDep = 14; // for checkifinrange
 //===============================================================================================================================================================================================================
 
@@ -914,8 +914,8 @@ TEST_CASE("xPixelOpsSTD-perf")
       static_cast<void (*)(uint16 *, const uint8 *, int32, int32, int32, int32)>(&xPixelOpsSTD::CvtUpsampleH),
       static_cast<void (*)(uint8 *, const uint16 *, int32, int32, int32, int32)>(&xPixelOpsSTD::CvtDownsampleH),
       {2, 1});
-  fmt::print("TIME(xPixelOpsSTD::UpsampleH) = {:.2f} MiB/s\n", AT32 / (1024 * 1024));
-  fmt::print("TIME(xPixelOpsSTD::DownsampleH) = {:.2f} MiB/s\n", BT32 / (1024 * 1024));
+  fmt::print("TIME(xPixelOpsSTD::CvtUpsampleH) = {:.2f} MiB/s\n", AT32 / (1024 * 1024));
+  fmt::print("TIME(xPixelOpsSTD::CvtDownsampleH) = {:.2f} MiB/s\n", BT32 / (1024 * 1024));
 
   auto [AT4, BT4] = perfRearrange(
       &xPixelOpsSTD::AOS4fromSOA3,
@@ -1013,8 +1013,8 @@ TEST_CASE("xPixelOpsNEON-perf")
       static_cast<void (*)(uint16 *, const uint8 *, int32, int32, int32, int32)>(&xPixelOpsNEON::CvtUpsampleH),
       static_cast<void (*)(uint8 *, const uint16 *, int32, int32, int32, int32)>(&xPixelOpsNEON::CvtDownsampleH),
       {2, 1});
-  fmt::print("TIME(xPixelOpsNEON::UpsampleH) = {:.2f} MiB/s\n", AT32 / (1024 * 1024));
-  fmt::print("TIME(xPixelOpsNEON::DownsampleH) = {:.2f} MiB/s\n", BT32 / (1024 * 1024));
+  fmt::print("TIME(xPixelOpsNEON::CvtUpsampleH) = {:.2f} MiB/s\n", AT32 / (1024 * 1024));
+  fmt::print("TIME(xPixelOpsNEON::CvtDownsampleH) = {:.2f} MiB/s\n", BT32 / (1024 * 1024));
 
   auto [AT4, BT4] = perfRearrange(
       &xPixelOpsNEON::AOS4fromSOA3,

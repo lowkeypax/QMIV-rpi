@@ -24,7 +24,7 @@ static const std::vector<int32> c_Cntrs = { 1, 256, 1024, 4096 };
 static constexpr int32          c_Max   = 16383;
 
 
-static const int32 c_PerfUnitSize = 128;
+static const int32 c_PerfUnitSize = 532;
 static const int32 c_PerfNumIters = 3;
 
 //===============================================================================================================================================================================================================

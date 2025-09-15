@@ -5,7 +5,7 @@ project(${PROJECT_NAME} CXX)
 #=========================================================================================================================================
 # set verbose compile options
 #=========================================================================================================================================
-#set(CMAKE_VERBOSE_MAKEFILE ON)
+set(CMAKE_VERBOSE_MAKEFILE ON)
 
 #=========================================================================================================================================
 # Testing
@@ -132,6 +132,14 @@ if(PMBB_GENERATE_MULTI_MICROARCH_LEVEL_BINARIES)
     message(STATUS "  MFL=${MFL} NC=${MFL_CN} CO=[${MFL_CO}] CD=[${MFL_CD}]")
   endforeach()
 endif()
+
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+add_compile_options    ("-fno-tree-vectorize" "-fno-tree-loop-vectorize" "-fno-tree-slp-vectorize")
+endif()
+if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+add_compile_options("-fno-vectorize" "-fno-slp-vectorize")
+endif()
+
 
 #=========================================================================================================================================
 # info

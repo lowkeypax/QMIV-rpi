@@ -98,8 +98,10 @@ void testCalcBlckAvg(std::function<flt64(const uint16* Tst, const uint16* Ref, i
 
 flt64 perfCalcBlckAvg(std::function<flt64(const uint16* Tst, const uint16* Ref, int32 StrideT, int32 StrideR, int32 WndSize, flt64 C1, flt64 C2, bool CalcL)> CalcBlckAvg)
 {
-  const int32V2 Size = { 1920, 1920 };
-  const int32 d = 120;
+  const int32 x = 4090;
+  const int32V2 Size = { x, x };
+  const int32 d = 500;
+  const int32 iter = 15;
 
   xPlane<uint16>* Ref = new xPlane<uint16>(Size, 14, 0);
   xPlane<uint16>* Tst = new xPlane<uint16>(Size, 14, 0);
@@ -115,7 +117,7 @@ flt64 perfCalcBlckAvg(std::function<flt64(const uint16* Tst, const uint16* Ref, 
   flt64 B =                CalcBlckAvg(Tst->getAddr(), Ref->getAddr(), Tst->getStride(), Ref->getStride(), d, C1, C2, true);
   CHECK(A == B);
     //measure
-  for(int32 j = 0; j < 10; j++) //perfitersations
+  for(int32 j = 0; j < iter; j++) //perfitersations
   {
     
     flt64 A = xStructSimSTD::CalcBlckAvg(Tst->getAddr(), Ref->getAddr(), Tst->getStride(), Ref->getStride(), d, C1, C2, true);
@@ -126,7 +128,7 @@ flt64 perfCalcBlckAvg(std::function<flt64(const uint16* Tst, const uint16* Ref, 
     AT += T1 - T0;
   }
 
-  int64 NumBytes      = (int64)1200 * (int64)1200 * (int64)10 * sizeof(int16);
+  int64 NumBytes      = (int64)x * (int64)x * (int64)iter * sizeof(int16);
   flt64 BytesPerSecT = NumBytes / std::chrono::duration_cast<tDurationS>(AT).count();
 
   delete Ref;

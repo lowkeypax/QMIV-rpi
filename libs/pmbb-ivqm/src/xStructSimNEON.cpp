@@ -28,14 +28,8 @@ flt64 xStructSimNEON::CalcBlckAvg(const uint16* Tst, const uint16* Ref, int32 St
       uint16x8_t Tst_V = vld1q_u16(Tst+x);
       uint16x8_t Ref_V = vld1q_u16(Ref+x);
       //SumT  += T;
-      //__m128i Tst_I32_V1 = _mm_unpacklo_epi16(Tst_U16_V, _mm_setzero_si128());
-      //__m128i Tst_I32_V2 = _mm_unpackhi_epi16(Tst_U16_V, _mm_setzero_si128());
-      //SumT_I32_V  = _mm_add_epi32(SumT_I32_V, _mm_add_epi32(Tst_I32_V1, Tst_I32_V2)); 
       SumT_V = vaddq_s32(SumT_V, vpaddlq_s16(vreinterpretq_s16_u16(Tst_V)));
       //SumR  += R;
-      //__m128i Ref_I32_V1 = _mm_unpacklo_epi16(Ref_U16_V, _mm_setzero_si128());
-      //__m128i Ref_I32_V2 = _mm_unpackhi_epi16(Ref_U16_V, _mm_setzero_si128());
-      //SumR_I32_V  = _mm_add_epi32(SumR_I32_V, _mm_add_epi32(Ref_I32_V1, Ref_I32_V2)); 
       SumR_V = vaddq_s32(SumR_V, vpaddlq_s16(vreinterpretq_s16_u16(Ref_V)));
       //SumT2 += xPow2(T);
       SumT2_V = vmlal_u32(SumT2_V, vget_low_u32(vmovl_u16(vget_low_u16(Tst_V))), vget_low_u32(vmovl_u16(vget_low_u16(Tst_V))));

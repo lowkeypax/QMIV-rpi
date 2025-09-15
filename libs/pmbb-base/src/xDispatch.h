@@ -47,10 +47,6 @@ int main_AMD64v4(int /*argc*/, char* /*argv*/[], char* /*envp*/[]) { return EXIT
 static constexpr bool c_BUILD_WITH_AMD64v4 = false;
 #endif
 
-//aemm
-#if defined(BUILD_WITH_ARM64)
-
-
 //===============================================================================================================================================================================================================
 
 static std::vector<PMBB_BASE::xProcInfo::eMFL> determineSoftwareAvailable()

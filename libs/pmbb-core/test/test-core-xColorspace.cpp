@@ -145,7 +145,7 @@ std::tuple<flt64, flt64> perfColorSpace(
 )
 {
 #ifdef NDEBUG
-  constexpr int32 NumIters = 8;
+  constexpr int32 NumIters = 15;
   constexpr int32 NumPels = 1024 * 1024 * 64;
 #else
   constexpr int32 NumIters = 4;
