@@ -10,7 +10,7 @@
 namespace PMBB_NAMESPACE {
 
 //===============================================================================================================================================================================================================
-// xCorrespPixelShiftSTD
+// xCorrespPixelShiftSSE
 //===============================================================================================================================================================================================================
 
 uint64V4 xCorrespPixelShiftSSE::CalcDistAsymmetricRow(const xPicI* Tst, const xPicI* Ref, const int32 y, const int32V4& GlobalColorShift, const int32 SearchRange, const int32V4& CmpWeights)

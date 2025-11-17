@@ -34,7 +34,7 @@ namespace PMBB_NAMESPACE { using namespace PMBB_BASE; }
   #endif
 #endif
 
-#define USE_SIMD 1
+#define USE_SIMD 0
 
 namespace PMBB_NAMESPACE {
 
@@ -102,6 +102,8 @@ namespace PMBB_NAMESPACE {
 #endif
 #if (X_SIMD_HAS_NEON && USE_SIMD)
   #define X_SIMD_CAN_USE_NEON 1
+#else
+  #define X_SIMD_CAN_USE_NEON 0
 #endif
 
 

@@ -75,15 +75,15 @@ public:
   {
     xColorSpaceSSE::ConvertYCbCr2RGB_I32(R, G, B, Y, U, V, DstStride, SrcStride, Width, Height, BitDepth, ClrSpc);
   }
-//#elif X_CAN_USE_NEON
-//  static inline void ConvertRGB2YCbCr(uint16* Y, uint16* U, uint16* V, const uint16* R, const uint16* G, const uint16* B, int32 DstStride, int32 SrcStride, int32 Width, int32 Height, int32 BitDepth, eClrSpcLC ClrSpc)
-//  {
-//    xColorSpaceNEON::ConvertRGB2YCbCr_I32(Y, U, V, R, G, B, DstStride, SrcStride, Width, Height, BitDepth, ClrSpc);
-//  }
-//  static inline void ConvertYCbCr2RGB(uint16* R, uint16* G, uint16* B, const uint16* Y, const uint16* U, const uint16* V, int32 DstStride, int32 SrcStride, int32 Width, int32 Height, int32 BitDepth, eClrSpcLC ClrSpc)
-//  {
-//    xColorSpaceNEON::ConvertYCbCr2RGB_I32(R, G, B, Y, U, V, DstStride, SrcStride, Width, Height, BitDepth, ClrSpc);
-//  }
+#elif X_CAN_USE_NEON
+  static inline void ConvertRGB2YCbCr(uint16* Y, uint16* U, uint16* V, const uint16* R, const uint16* G, const uint16* B, int32 DstStride, int32 SrcStride, int32 Width, int32 Height, int32 BitDepth, eClrSpcLC ClrSpc)
+  {
+    xColorSpaceNEON::ConvertRGB2YCbCr_I32(Y, U, V, R, G, B, DstStride, SrcStride, Width, Height, BitDepth, ClrSpc);
+  }
+  static inline void ConvertYCbCr2RGB(uint16* R, uint16* G, uint16* B, const uint16* Y, const uint16* U, const uint16* V, int32 DstStride, int32 SrcStride, int32 Width, int32 Height, int32 BitDepth, eClrSpcLC ClrSpc)
+  {
+    xColorSpaceNEON::ConvertYCbCr2RGB_I32(R, G, B, Y, U, V, DstStride, SrcStride, Width, Height, BitDepth, ClrSpc);
+  }
 #else
   static inline void ConvertRGB2YCbCr(uint16* Y, uint16* U, uint16* V, const uint16* R, const uint16* G, const uint16* B, int32 DstStride, int32 SrcStride, int32 Width, int32 Height, int32 BitDepth, eClrSpcLC ClrSpc)
   {

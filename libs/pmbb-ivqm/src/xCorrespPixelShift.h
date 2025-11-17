@@ -19,6 +19,14 @@
 #define X_CORRESPPIXELSHIFT_CAN_USE_SSE 0
 #endif
 
+//NEON implementation
+#if X_SIMD_CAN_USE_NEON && __has_include("xCorrespPixelShiftNEON.h")
+#define X_CORRESPPIXELSHIFT_CAN_USE_NEON 1
+#include "xCorrespPixelShiftNEON.h"
+#else
+#define X_CORRESPPIXELSHIFT_CAN_USE_NEON 0
+#endif
+
 namespace PMBB_NAMESPACE {
 
 //===============================================================================================================================================================================================================
@@ -56,7 +64,9 @@ public:
   //asymetric Q interleaved
 #if X_CORRESPPIXELSHIFT_CAN_USE_SSE
   static inline uint64V4 xCalcDistAsymmetricRow(const xPicI* Tst, const xPicI* Ref, const int32 y, const int32V4& GlobalColorShift, const int32 SearchRange, const int32V4& CmpWeights) { return xCorrespPixelShiftSSE::CalcDistAsymmetricRow(Tst, Ref, y, GlobalColorShift, SearchRange, CmpWeights); }
-#else //X_CORRESPPIXELSHIFT_CAN_USE_SSE
+#elif X_CORRESPPIXELSHIFT_CAN_USE_NEON
+  static inline uint64V4 xCalcDistAsymmetricRow(const xPicI* Tst, const xPicI* Ref, const int32 y, const int32V4& GlobalColorShift, const int32 SearchRange, const int32V4& CmpWeights) { return xCorrespPixelShiftNEON::CalcDistAsymmetricRow(Tst, Ref, y, GlobalColorShift, SearchRange, CmpWeights); }
+#else
   static inline uint64V4 xCalcDistAsymmetricRow(const xPicI* Tst, const xPicI* Ref, const int32 y, const int32V4& GlobalColorShift, const int32 SearchRange, const int32V4& CmpWeights) { return xCorrespPixelShiftSTD::CalcDistAsymmetricRow(Tst, Ref, y, GlobalColorShift, SearchRange, CmpWeights); }
 #endif //X_CORRESPPIXELSHIFT_CAN_USE_SSE
 

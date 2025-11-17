@@ -9,6 +9,14 @@
 //portable implementation
 #include "xStructSimSTD.h"
 
+//NEON implementation
+#if X_SIMD_CAN_USE_NEON && __has_include("xStructSimNEON.h")
+#define X_STRUCTSIM_CAN_USE_NEON 1
+#include "xStructSimNEON.h"
+#else
+#define X_STRUCTSIM_CAN_USE_NEON 0
+#endif
+
 //SSE implementation
 #if X_SIMD_CAN_USE_SSE && __has_include("xStructSimSSE.h")
 #define X_STRUCTSIM_CAN_USE_SSE 1
@@ -55,6 +63,8 @@ public:
   static inline flt64 CalcBlckAvg(const uint16* Tst, const uint16* Ref, int32 StrideT, int32 StrideR, int32 WndSize, flt64 C1, flt64 C2, bool CalcL) { return xStructSimAVX::CalcBlckAvg(Tst, Ref, StrideT, StrideR, WndSize, C1, C2, CalcL); }
 #elif X_STRUCTSIM_CAN_USE_SSE
   static inline flt64 CalcBlckAvg(const uint16* Tst, const uint16* Ref, int32 StrideT, int32 StrideR, int32 WndSize, flt64 C1, flt64 C2, bool CalcL) { return xStructSimSSE::CalcBlckAvg(Tst, Ref, StrideT, StrideR, WndSize, C1, C2, CalcL); }
+#elif X_STRUCTSIM_CAN_USE_NEON
+  static inline flt64 CalcBlckAvg(const uint16* Tst, const uint16* Ref, int32 StrideT, int32 StrideR, int32 WndSize, flt64 C1, flt64 C2, bool CalcL) { return xStructSimNEON::CalcBlckAvg(Tst, Ref, StrideT, StrideR, WndSize, C1, C2, CalcL); }
 #else
   static inline flt64 CalcBlckAvg(const uint16* Tst, const uint16* Ref, int32 StrideT, int32 StrideR, int32 WndSize, flt64 C1, flt64 C2, bool CalcL) { return xStructSimSTD::CalcBlckAvg(Tst, Ref, StrideT, StrideR, WndSize, C1, C2, CalcL); }
 #endif

@@ -145,12 +145,13 @@ std::tuple<flt64, flt64> perfColorSpace(
 )
 {
 #ifdef NDEBUG
-  constexpr int32 NumIters = 8;
+  constexpr int32 NumIters = 15;
   constexpr int32 NumPels = 1024 * 1024 * 64;
 #else
   constexpr int32 NumIters = 4;
   constexpr int32 NumPels  = 1024;
   INFO("WARNING: performance evaluation results are useless when build in debug mode");
+  printf("WARNING: performance evaluation results are useless when build in debug mode");
 #endif  
   constexpr int64 BuffSize = NumPels * sizeof(uint16);
 
@@ -236,6 +237,13 @@ TEST_CASE("xColorSpaceSTD-I32")
   testColorSpace(xColorSpaceSTD::ConvertRGB2YCbCr_I32, xColorSpaceSTD::ConvertYCbCr2RGB_I32);
 }
 
+#if X_SIMD_CAN_USE_NEON
+TEST_CASE("xColorSpaceNEON-I32")
+{
+  testColorSpace(xColorSpaceNEON::ConvertRGB2YCbCr_I32, xColorSpaceNEON::ConvertYCbCr2RGB_I32);
+}
+#endif //X_SIMD_CAN_USE_NEON
+
 #if X_SIMD_CAN_USE_SSE
 TEST_CASE("xColorSpaceSSE-I32")
 {
@@ -270,6 +278,15 @@ TEST_CASE("xColorSpaceSTD-I32-perf")
   fmt::print("TIME(xColorSpaceSTD::ConvertRGB2YCbCr_I32) = {:.2f} MiB/s\n", RY / (1024 * 1024));
   fmt::print("TIME(xColorSpaceSTD::ConvertYCbCr2RGB_I32) = {:.2f} MiB/s\n", YR / (1024 * 1024));
 }
+
+#if X_SIMD_CAN_USE_NEON
+TEST_CASE("xColorSpaceNEON-I32-perf")
+{
+  auto [RY, YR] = perfColorSpace(xColorSpaceNEON::ConvertRGB2YCbCr_I32, xColorSpaceNEON::ConvertYCbCr2RGB_I32);
+  fmt::print("TIME(xColorSpaceNEON::ConvertRGB2YCbCr_I32) = {:.2f} MiB/s\n", RY / (1024 * 1024));
+  fmt::print("TIME(xColorSpaceNEON::ConvertYCbCr2RGB_I32) = {:.2f} MiB/s\n", YR / (1024 * 1024));
+}
+#endif //X_SIMD_CAN_USE_SSE
 
 #if X_SIMD_CAN_USE_SSE
 TEST_CASE("xColorSpaceSSE-I32-perf")
