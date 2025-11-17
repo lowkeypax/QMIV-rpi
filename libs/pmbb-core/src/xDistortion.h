@@ -35,6 +35,14 @@
 #define X_CAN_USE_AVX512 0
 #endif
 
+//NEON implementation
+#if X_SIMD_CAN_USE_NEON && __has_include("xDistortionNEON.h")
+#define X_CAN_USE_NEON 1
+#include "xDistortionNEON.h"
+#else
+#define X_CAN_USE_NEON 0
+#endif
+
 
 namespace PMBB_NAMESPACE {
 
@@ -70,7 +78,16 @@ public:
   static inline uint64 CalcSSD(const uint16* Tst, const uint16* Ref,                                   int32 Area               ) { return xDistortionSSE::CalcSSD(Tst, Ref,                       Area          ); }
   static inline uint64 CalcSSD(const uint16* Tst, const uint16* Ref, int32 TstStride, int32 RefStride, int32 Width, int32 Height) { return xDistortionSSE::CalcSSD(Tst, Ref, TstStride, RefStride, Width,  Height); }
 
-#else //X_CAN_USE_???
+#elif X_CAN_USE_NEON
+
+  static inline  int32 CalcSD (const uint16* Tst, const uint16* Ref,                                   int32 Area               ) { return xDistortionNEON::CalcSD (Tst, Ref,                       Area          ); }
+  static inline  int32 CalcSD (const uint16* Tst, const uint16* Ref, int32 TstStride, int32 RefStride, int32 Width, int32 Height) { return xDistortionNEON::CalcSD (Tst, Ref, TstStride, RefStride, Width,  Height); }
+  static inline uint32 CalcSAD(const uint16* Tst, const uint16* Ref,                                   int32 Area               ) { return xDistortionNEON::CalcSAD(Tst, Ref,                       Area          ); }
+  static inline uint32 CalcSAD(const uint16* Tst, const uint16* Ref, int32 TstStride, int32 RefStride, int32 Width, int32 Height) { return xDistortionNEON::CalcSAD(Tst, Ref, TstStride, RefStride, Width,  Height); }
+  static inline uint64 CalcSSD(const uint16* Tst, const uint16* Ref,                                   int32 Area               ) { return xDistortionNEON::CalcSSD(Tst, Ref,                       Area          ); }
+  static inline uint64 CalcSSD(const uint16* Tst, const uint16* Ref, int32 TstStride, int32 RefStride, int32 Width, int32 Height) { return xDistortionNEON::CalcSSD(Tst, Ref, TstStride, RefStride, Width,  Height); }
+
+#else //X_CAN_USE_??
 
   static inline  int32 CalcSD (const uint16* Tst, const uint16* Ref,                                   int32 Area               ) { return xDistortionSTD::CalcSD (Tst, Ref,                       Area          ); }
   static inline  int32 CalcSD (const uint16* Tst, const uint16* Ref, int32 TstStride, int32 RefStride, int32 Width, int32 Height) { return xDistortionSTD::CalcSD (Tst, Ref, TstStride, RefStride, Width,  Height); }
@@ -95,3 +112,4 @@ public:
 #undef X_CAN_USE_SSE
 #undef X_CAN_USE_AVX
 #undef X_CAN_USE_AVX512
+#undef X_CAN_USE_NEON

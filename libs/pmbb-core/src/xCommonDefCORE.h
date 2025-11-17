@@ -26,11 +26,15 @@ namespace PMBB_NAMESPACE { using namespace PMBB_BASE; }
 //===============================================================================================================================================================================================================
 #if defined(_MSC_VER) && (defined(_M_X64) || defined(_M_AMD64) || defined(_M_IX86))
 #include <intrin.h>
-#elif defined(__GNUC__) && (defined(__x86_64__) || defined(__i386__))
-#include <x86intrin.h>
+#elif defined(__GNUC__) 
+  #if (defined(__x86_64__) || defined(__i386__))
+    #include <x86intrin.h>
+  #elif (defined (__aarch64__) && defined (__ARM_NEON))
+    #include <arm_neon.h>
+  #endif
 #endif
 
-#define USE_SIMD  1 // use SIMD
+#define USE_SIMD 0
 
 namespace PMBB_NAMESPACE {
 
@@ -85,6 +89,24 @@ namespace PMBB_NAMESPACE {
 #define X_SIMD_HAS_AVX512 0
 #endif
 #define X_SIMD_CAN_USE_AVX512 (X_SIMD_HAS_AVX512 && USE_SIMD)
+
+//---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+// SIMD section - NEON (corresponding to ARMv8)
+//---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+//neon
+#if defined (__ARM_NEON)
+#define X_SIMD_HAS_NEON 1
+#else
+#define X_SIMD_HAS_NEON 0
+#endif
+#if (X_SIMD_HAS_NEON && USE_SIMD)
+  #define X_SIMD_CAN_USE_NEON 1
+#else
+  #define X_SIMD_CAN_USE_NEON 0
+#endif
+
+
 
 //===============================================================================================================================================================================================================
 // Basic ops

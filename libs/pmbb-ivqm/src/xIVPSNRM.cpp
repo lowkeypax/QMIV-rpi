@@ -4,7 +4,6 @@
 */
 
 #include "xIVPSNR.h"
-#include "xGlobalColorShift.h"
 #include "xPixelOps.h"
 #include <cassert>
 #include <numeric>

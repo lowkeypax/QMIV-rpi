@@ -1,0 +1,28 @@
+#pragma once
+
+#include "xCommonDefCORE.h"
+
+#if X_SIMD_CAN_USE_NEON
+
+namespace PMBB_NAMESPACE {
+
+//===============================================================================================================================================================================================================
+
+class xDistortionNEON
+{
+public:
+  //SD, SSD
+  static  int32 CalcSD (const uint16* restrict Tst, const uint16* restrict Ref,                                   int32 Area               );
+  static  int32 CalcSD (const uint16* restrict Tst, const uint16* restrict Ref, int32 TstStride, int32 RefStride, int32 Width, int32 Height);
+  static uint32 CalcSAD(const uint16* restrict Tst, const uint16* restrict Ref, int32 Area                                                 );
+  static uint32 CalcSAD(const uint16* restrict Tst, const uint16* restrict Ref, int32 TstStride, int32 RefStride, int32 Width, int32 Height);
+  
+  static uint64 CalcSSD(const uint16* restrict Tst, const uint16* restrict Ref,                                   int32 Area               );
+  static uint64 CalcSSD(const uint16* restrict Tst, const uint16* restrict Ref, int32 TstStride, int32 RefStride, int32 Width, int32 Height);
+};
+
+//===============================================================================================================================================================================================================
+
+} //end of namespace PMBB
+
+#endif //X_SIMD_CAN_USE_NEON

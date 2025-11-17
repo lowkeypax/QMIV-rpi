@@ -12,7 +12,8 @@
 #include <functional>
 #include <utility>
 #include <array>
-#include "xTestUtils.h"
+#include "../src/xTestUtils.h"
+#include "xTimeUtils.h"
 #include "xMemory.h"
 #include "xStructSim.h"
 #include "xPlane.h"
@@ -95,12 +96,73 @@ void testCalcBlckAvg(std::function<flt64(const uint16* Tst, const uint16* Ref, i
   }
 }
 
+flt64 perfCalcBlckAvg(std::function<flt64(const uint16* Tst, const uint16* Ref, int32 StrideT, int32 StrideR, int32 WndSize, flt64 C1, flt64 C2, bool CalcL)> CalcBlckAvg)
+{
+  const int32 x = 4090;
+  const int32V2 Size = { x, x };
+  const int32 d = 500;
+  const int32 iter = 15;
+
+  xPlane<uint16>* Ref = new xPlane<uint16>(Size, 14, 0);
+  xPlane<uint16>* Tst = new xPlane<uint16>(Size, 14, 0);
+
+  uint32 State;
+  State = xTestUtils::fillMidNoise(Ref->getAddr(), Ref->getStride(), Ref->getWidth(), Ref->getHeight(), Ref->getBitDepth(), 0);
+  State = xTestUtils::fillMidNoise(Tst->getAddr(), Tst->getStride(), Tst->getWidth(), Tst->getHeight(), Tst->getBitDepth(), 0);
+
+  tDuration AT = (tDuration)0;
+
+  //warmup
+  flt64 A = xStructSimSTD::CalcBlckAvg(Tst->getAddr(), Ref->getAddr(), Tst->getStride(), Ref->getStride(), d, C1, C2, true);
+  flt64 B =                CalcBlckAvg(Tst->getAddr(), Ref->getAddr(), Tst->getStride(), Ref->getStride(), d, C1, C2, true);
+  CHECK(A == B);
+    //measure
+  for(int32 j = 0; j < iter; j++) //perfitersations
+  {
+    
+    flt64 A = xStructSimSTD::CalcBlckAvg(Tst->getAddr(), Ref->getAddr(), Tst->getStride(), Ref->getStride(), d, C1, C2, true);
+    tTimePoint T0 = tClock::now();
+    flt64 B =                CalcBlckAvg(Tst->getAddr(), Ref->getAddr(), Tst->getStride(), Ref->getStride(), d, C1, C2, true);
+    tTimePoint T1 = tClock::now();
+    CHECK(A == B);
+    AT += T1 - T0;
+  }
+
+  int64 NumBytes      = (int64)x * (int64)x * (int64)iter * sizeof(int16);
+  flt64 BytesPerSecT = NumBytes / std::chrono::duration_cast<tDurationS>(AT).count();
+
+  delete Ref;
+  delete Tst;
+
+  return BytesPerSecT;
+}
+
 //===============================================================================================================================================================================================================
 
 TEST_CASE("xStructSimSTD")
 {
   testCalcBlckAvg(xStructSimSTD::CalcBlckAvg);
 }
+
+TEST_CASE("xStructSimSTD-perf")
+{
+  auto T = perfCalcBlckAvg(xStructSimSTD::CalcBlckAvg);
+  fmt::print("TIME(xStructSimSTD::CalcBlckAvg) = {:.2f} MiB/s\n", T / (1024 * 1024));
+}
+
+#if X_SIMD_CAN_USE_NEON
+TEST_CASE("xStructSimNEON")
+{
+  testCalcBlckAvg(xStructSimNEON::CalcBlckAvg);
+}
+
+TEST_CASE("xStructSimNEON-perf")
+{
+  auto T = perfCalcBlckAvg(xStructSimNEON::CalcBlckAvg);
+  fmt::print("TIME(xStructSimNEON::CalcBlckAvg) = {:.2f} MiB/s\n", T / (1024 * 1024));
+}
+
+#endif //X_SIMD_CAN_USE_NEON
 
 #if X_SIMD_CAN_USE_SSE
 TEST_CASE("xStructSimSSE")

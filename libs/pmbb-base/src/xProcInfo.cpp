@@ -7,15 +7,19 @@
 #include "xString.h"
 #include <cstring>
 
-
 #if defined(X_PMBB_COMPILER_MSVC)
   #include <intrin.h>
-#elif defined(X_PMBB_COMPILER_GCC) || defined(X_PMBB_COMPILER_CLANG)
-  #include <cpuid.h>
-#else
-  #error "Unknown compiler"
+#elif (defined(X_PMBB_COMPILER_GCC) || defined(X_PMBB_COMPILER_CLANG))
+  #if X_ARCHITECTURE_AMD64
+    #include <cpuid.h>
+  #endif
+  #if X_ARCHITECTURE_ARM64
+    #include <sys/auxv.h>
+    #include <asm/hwcap.h>
+  #endif
+  #else
+    #error "Unknown compiler"
 #endif
-
 
 #if defined(X_PMBB_OPERATING_SYSTEM_WINDOWS)
   #define WIN32_LEAN_AND_MEAN
@@ -29,40 +33,40 @@
 //=============================================================================================================================================================================
 // Helper functions - CPU
 //=============================================================================================================================================================================
+#if X_ARCHITECTURE_AMD64
+  namespace {
 
-namespace {
+  static constexpr uint32_t c_RegEAX = 0;
+  static constexpr uint32_t c_RegEBX = 1;
+  static constexpr uint32_t c_RegECX = 2;
+  static constexpr uint32_t c_RegEDX = 3;
+  static constexpr uint32_t c_RegNUM = 4;
 
-static constexpr uint32_t c_RegEAX = 0;
-static constexpr uint32_t c_RegEBX = 1;
-static constexpr uint32_t c_RegECX = 2;
-static constexpr uint32_t c_RegEDX = 3;
-static constexpr uint32_t c_RegNUM = 4;
+  void xCPUID(uint32_t RegistersTable[c_RegNUM], uint32_t Leaf, uint32_t SubLeaf=0)
+  {
+    #if defined(__GNUC__) || defined(__clang__)
+      __get_cpuid_count(Leaf, SubLeaf, RegistersTable + c_RegEAX, RegistersTable + c_RegEBX, RegistersTable + c_RegECX, RegistersTable + c_RegEDX);
+    #elif defined(_MSC_VER)
+      __cpuidex((int*)RegistersTable, Leaf, SubLeaf);
+    #else
+      #error "Unknown compiler"
+    #endif
+  }
 
-void xCPUID(uint32_t RegistersTable[c_RegNUM], uint32_t Leaf, uint32_t SubLeaf=0)
-{
-#if defined(__GNUC__) || defined(__clang__)
-  __get_cpuid_count(Leaf, SubLeaf, RegistersTable + c_RegEAX, RegistersTable + c_RegEBX, RegistersTable + c_RegECX, RegistersTable + c_RegEDX);
-#elif defined(_MSC_VER)
-  __cpuidex((int*)RegistersTable, Leaf, SubLeaf);
-#else
-  #error "Unknown compiler"
-#endif
-}
-
-uint64_t xXGETBV(uint32_t ExtendedControlRegisterIdx)
-{
-#if (defined (_MSC_FULL_VER) && _MSC_FULL_VER >= 160040000) || (defined (__INTEL_COMPILER) && __INTEL_COMPILER >= 1200)
-  return uint64_t(_xgetbv(ExtendedControlRegisterIdx));
-#elif defined(__GNUC__) ||  defined (__clang__)
-  uint32_t a, d;
-  __asm("xgetbv" : "=a"(a), "=d"(d) : "c"(ExtendedControlRegisterIdx) : );
-  return uint64_t(a) | (uint64_t(d) << 32);
-#else
-  #error "Unknown or unsuported compiler"
-#endif
-}
-
+  uint64_t xXGETBV(uint32_t ExtendedControlRegisterIdx)
+  {
+  #if (defined (_MSC_FULL_VER) && _MSC_FULL_VER >= 160040000) || (defined (__INTEL_COMPILER) && __INTEL_COMPILER >= 1200)
+    return uint64_t(_xgetbv(ExtendedControlRegisterIdx));
+  #elif defined(__GNUC__) ||  defined (__clang__)
+    uint32_t a, d;
+    __asm("xgetbv" : "=a"(a), "=d"(d) : "c"(ExtendedControlRegisterIdx) : );
+    return uint64_t(a) | (uint64_t(d) << 32);
+  #else
+    #error "Unknown or unsuported compiler"
+  #endif
+  }
 } //end of namespace
+#endif
 
 //=============================================================================================================================================================================
 // Helper functions - memory
@@ -262,51 +266,59 @@ std::string xProcInfo::xFormatMemInfo(const xMem& Mem)
   Message += "  MemoryPageSize = " + std::to_string(Mem.getMemoryPageSize()) + "\n";
   return Message;
 }
-xProcInfo::eMFL xProcInfo::determineMicroArchFeatureLevel()
-{
-  //x86-64-v4 : AVX512F, AVX512BW, AVX512CD, AVX512DQ, AVX512VL
-  if(matchesAMD64v4()) { return eMFL::AMD64v4; }
-  //x86-64-v3 : AVX, AVX2, BMI1, BMI2, F16C, FMA, LZCNT, MOVBE, XSAVE
-  if(matchesAMD64v3()) { return eMFL::AMD64v3; }
-  //x86-64-v2 : CMPXCHG16B, LAHF-SAHF, POPCNT, SSE3, SSE4.1, SSE4.2, SSSE3
-  if(matchesAMD64v2()) { return eMFL::AMD64v2; }
-  //x86-64    : CMOV, CMPXCHG8B, FPU, FXSR, MMX, FXSR, SCE, SSE, SSE2
-  if(matchesAMD64v1()) { return eMFL::AMD64v1; }
-  //nothing
-  return eMFL::UNDEFINED;
-}
-xProcInfo::eMFL xProcInfo::xStrToMfl(const std::string_view Mfl)
-{
-  std::string MflU = xString::toUpper(Mfl);
-  return (MflU == "UNDEFINED"                     ) ? eMFL::UNDEFINED :
-         (MflU == "AMD64V1" || MflU == "X86-64"   ) ? eMFL::AMD64v1   :
-         (MflU == "AMD64V2" || MflU == "X86-64-V2") ? eMFL::AMD64v2   :
-         (MflU == "AMD64V3" || MflU == "X86-64-V3") ? eMFL::AMD64v3   :
-         (MflU == "AMD64V4" || MflU == "X86-64-V4") ? eMFL::AMD64v4   :
-                                                      eMFL::INVALID;
-}
-std::string xProcInfo::xMflToStr(eMFL Mfl)
-{
-  return Mfl == eMFL::UNDEFINED ? "UNDEFINED" :
-         Mfl == eMFL::AMD64v1   ? "x86-64"    :
-         Mfl == eMFL::AMD64v2   ? "x86-64-v2" :
-         Mfl == eMFL::AMD64v3   ? "x86-64-v3" :
-         Mfl == eMFL::AMD64v4   ? "x86-64-v4" :
-                                  "INVALID";
-}
-void xProcInfo::xDetectExts()
-{
-  //http://www.sandpile.org/x86/cpuid.htm
-  //StandardLevel = 0
-  uint32_t CPUInfo[c_RegNUM]; //[0]=EAX, [1]=EBX, [2]=ECX, [3]=EDX  
-  xCPUID(CPUInfo, 0);
-  uint32_t HighestFunctionSupported = CPUInfo[0];
-  memcpy(m_VendorID, &CPUInfo[1], 3*sizeof(int32_t));
+#if X_ARCHITECTURE_AMD64
+  xProcInfo::eMFL xProcInfo::determineMicroArchFeatureLevel()
+  {
+    //x86-64-v4 : AVX512F, AVX512BW, AVX512CD, AVX512DQ, AVX512VL
+    if(matchesAMD64v4()) { return eMFL::AMD64v4; }
+    //x86-64-v3 : AVX, AVX2, BMI1, BMI2, F16C, FMA, LZCNT, MOVBE, XSAVE
+    if(matchesAMD64v3()) { return eMFL::AMD64v3; }
+    //x86-64-v2 : CMPXCHG16B, LAHF-SAHF, POPCNT, SSE3, SSE4.1, SSE4.2, SSSE3
+    if(matchesAMD64v2()) { return eMFL::AMD64v2; }
+    //x86-64    : CMOV, CMPXCHG8B, FPU, FXSR, MMX, FXSR, SCE, SSE, SSE2
+    if(matchesAMD64v1()) { return eMFL::AMD64v1; }
+    //nothing
+    return eMFL::UNDEFINED;
+  }
+  xProcInfo::eMFL xProcInfo::xStrToMfl(const std::string_view Mfl)
+  {
+    std::string MflU = xString::toUpper(Mfl);
+    return (MflU == "UNDEFINED"                     ) ? eMFL::UNDEFINED :
+          (MflU == "AMD64V1" || MflU == "X86-64"   ) ? eMFL::AMD64v1   :
+          (MflU == "AMD64V2" || MflU == "X86-64-V2") ? eMFL::AMD64v2   :
+          (MflU == "AMD64V3" || MflU == "X86-64-V3") ? eMFL::AMD64v3   :
+          (MflU == "AMD64V4" || MflU == "X86-64-V4") ? eMFL::AMD64v4   :
+                                                        eMFL::INVALID;
+  }
+  std::string xProcInfo::xMflToStr(eMFL Mfl)
+  {
+    return Mfl == eMFL::UNDEFINED ? "UNDEFINED" :
+          Mfl == eMFL::AMD64v1   ? "x86-64"    :
+          Mfl == eMFL::AMD64v2   ? "x86-64-v2" :
+          Mfl == eMFL::AMD64v3   ? "x86-64-v3" :
+          Mfl == eMFL::AMD64v4   ? "x86-64-v4" :
+                                    "INVALID";
+  }
+#endif
+  void xProcInfo::xDetectExts()
+  {
+    #if X_ARCHITECTURE_AMD64
+      //http://www.sandpile.org/x86/cpuid.htm
+      //StandardLevel = 0
+      uint32_t CPUInfo[c_RegNUM]; //[0]=EAX, [1]=EBX, [2]=ECX, [3]=EDX  
+      xCPUID(CPUInfo, 0);
+      uint32_t HighestFunctionSupported = CPUInfo[0];
+      memcpy(m_VendorID, &CPUInfo[1], 3*sizeof(int32_t));
 
-  m_Exts  = xDetectProcExts(HighestFunctionSupported);
-  m_OSAVX = xDetectOSAVX();
-  m_ExtsChecked = true;
-}
+      m_Exts  = xDetectProcExts(HighestFunctionSupported);
+      m_OSAVX = xDetectOSAVX();
+    #endif
+    #if X_ARCHITECTURE_ARM64
+      m_Exts  = xDetectProcExts();
+    #endif
+    m_ExtsChecked = true;
+  }
+
 void xProcInfo::xDetectMem()
 {
   int32_t CacheLineSize  = xDetectCacheLineSize();
@@ -315,199 +327,211 @@ void xProcInfo::xDetectMem()
   m_Mem.setMemoryPageSize(MemoryPageSize);
   m_MemChecked = true;
 }
+
 xProcInfo::xExts xProcInfo::xDetectProcExts(uint32_t HighestFunctionSupported)
 {
   xExts Exts;
 
-  // http://www.sandpile.org/x86/cpuid.htm
-  uint32_t CPUInfo[c_RegNUM] = { 0 }; //[0] =EAX, [1]=EBX, [2]=ECX, [3]=EDX  
 
-  //StandardLevel = 1
-  if(HighestFunctionSupported>=1)
-  {
-    xCPUID(CPUInfo, 1);
-    //EDX
-    Exts.setExt(eExt::FPU               , (CPUInfo[c_RegEDX] & (1<< 0)) != 0);
-    //vme              
-    //de               
-    Exts.setExt(eExt::PSE               , (CPUInfo[c_RegEDX] & (1<< 3)) != 0);
-    Exts.setExt(eExt::TSC               , (CPUInfo[c_RegEDX] & (1<< 4)) != 0);
-    //msr              
-    Exts.setExt(eExt::PAE               , (CPUInfo[c_RegEDX] & (1<< 6)) != 0);
-    //mce              
-    Exts.setExt(eExt::CMPXCHG8B         , (CPUInfo[c_RegEDX] & (1<< 8)) != 0);
-    //apic             
-    //NN               
-    Exts.setExt(eExt::SEP               , (CPUInfo[c_RegEDX] & (1<<11)) != 0);
-    //mtrr             
-    //pge              
-    //mca              
-    Exts.setExt(eExt::CMOV              , (CPUInfo[c_RegEDX] & (1<<15)) != 0);
-    //pat              
-    Exts.setExt(eExt::PSE36             , (CPUInfo[c_RegEDX] & (1<<17)) != 0);
-    //psn              
-    Exts.setExt(eExt::CLFLUSH           , (CPUInfo[c_RegEDX] & (1<<19)) != 0);
-    //NN               
-    //ds               
-    //acpi             
-    Exts.setExt(eExt::MMX               , (CPUInfo[c_RegEDX] & (1<<23)) != 0);
-    Exts.setExt(eExt::FXRS              , (CPUInfo[c_RegEDX] & (1<<24)) != 0);
-    Exts.setExt(eExt::SSE1              , (CPUInfo[c_RegEDX] & (1<<25)) != 0);
-    Exts.setExt(eExt::SSE2              , (CPUInfo[c_RegEDX] & (1<<26)) != 0);
-    //ss               
-    Exts.setExt(eExt::HT                , (CPUInfo[c_RegEDX] & (1<<28)) != 0);
-    //tm               
-    //ia64             
-    //pbe              
-                       
-    //ECX              
-    Exts.setExt(eExt::SSE3              , (CPUInfo[c_RegECX] & (1<< 0)) != 0);
-    Exts.setExt(eExt::CLMUL             , (CPUInfo[c_RegECX] & (1<< 1)) != 0);
-    //dtes64           
-    //monitor          
-    //cr8_legacy       
-    Exts.setExt(eExt::LZCNT             , (CPUInfo[c_RegECX] & (1<< 5)) != 0);
-    Exts.setExt(eExt::SSSE3             , (CPUInfo[c_RegECX] & (1<< 9)) != 0);
-    Exts.setExt(eExt::FMA3              , (CPUInfo[c_RegECX] & (1<<12)) != 0);
-    Exts.setExt(eExt::CMPXCHG16B        , (CPUInfo[c_RegECX] & (1<<13)) != 0);
-    Exts.setExt(eExt::SSE4_1            , (CPUInfo[c_RegECX] & (1<<19)) != 0);
-    Exts.setExt(eExt::SSE4_2            , (CPUInfo[c_RegECX] & (1<<20)) != 0);
-    Exts.setExt(eExt::MOVBE             , (CPUInfo[c_RegECX] & (1<<22)) != 0);
-    Exts.setExt(eExt::POPCNT            , (CPUInfo[c_RegECX] & (1<<23)) != 0);
-    Exts.setExt(eExt::AES               , (CPUInfo[c_RegECX] & (1<<25)) != 0);
-    Exts.setExt(eExt::AVX1              , (CPUInfo[c_RegECX] & (1<<28)) != 0);
-    Exts.setExt(eExt::FP16C             , (CPUInfo[c_RegECX] & (1<<29)) != 0);
-    Exts.setExt(eExt::RDRAND            , (CPUInfo[c_RegECX] & (1<<30)) != 0);
-  }
+  #if X_ARCHITECTURE_ARM64
+  unsigned long hwcaps = getauxval(AT_HWCAP);
+      
+      if (hwcaps & HWCAP_ASIMD) {
+        {printf("ASIMD (NEON) is supported.\n");
+        Exts.setExt(eExt::NEON , (hwcaps & HWCAP_ASIMD));}
+    }
+  #endif
+  #if X_ARCHITECTURE_AMD64
+    // http://www.sandpile.org/x86/cpuid.htm
+    uint32_t CPUInfo[c_RegNUM] = { 0 }; //[0] =EAX, [1]=EBX, [2]=ECX, [3]=EDX  
 
-  //StandardLevel , 7
-  if(HighestFunctionSupported>=7)
-  {
-    xCPUID(CPUInfo, 7);    
-    //EBX
-    //fsgsbase
-    Exts.setExt(eExt::SGX               , (CPUInfo[c_RegEBX] & (1<< 2)) != 0);
-    Exts.setExt(eExt::BMI1              , (CPUInfo[c_RegEBX] & (1<< 3)) != 0);
-    Exts.setExt(eExt::HLE               , (CPUInfo[c_RegEBX] & (1<< 4)) != 0);
-    Exts.setExt(eExt::AVX2              , (CPUInfo[c_RegEBX] & (1<< 5)) != 0);
-    //NN                
-    //smep             
-    Exts.setExt(eExt::BMI2              , (CPUInfo[c_RegEBX] & (1<< 8)) != 0);
-    //erms             
-    Exts.setExt(eExt::INVPCID           , (CPUInfo[c_RegEBX] & (1<<10)) != 0);
-    Exts.setExt(eExt::RTM               , (CPUInfo[c_RegEBX] & (1<<11)) != 0);
-    //pqm              
-    //NN                
-    Exts.setExt(eExt::MPX               , (CPUInfo[c_RegEBX] & (1<<14)) != 0);
-    //pqe              
-    Exts.setExt(eExt::AVX512F           , (CPUInfo[c_RegEBX] & (1<<16)) != 0);
-    Exts.setExt(eExt::AVX512DQ          , (CPUInfo[c_RegEBX] & (1<<17)) != 0);
-    Exts.setExt(eExt::RDSEED            , (CPUInfo[c_RegEBX] & (1<<18)) != 0);
-    Exts.setExt(eExt::ADX               , (CPUInfo[c_RegEBX] & (1<<19)) != 0);
-    //smap             
-    Exts.setExt(eExt::AVX512IFMA        , (CPUInfo[c_RegEBX] & (1<<21)) != 0);
-    //pcommit
-    //clflushopt
-    Exts.setExt(eExt::CLWB              , (CPUInfo[c_RegEBX] & (1<<24)) != 0);
-    //intel_pt         
-    Exts.setExt(eExt::AVX512PF          , (CPUInfo[c_RegEBX] & (1<<26)) != 0);
-    Exts.setExt(eExt::AVX512ER          , (CPUInfo[c_RegEBX] & (1<<27)) != 0);
-    Exts.setExt(eExt::AVX512CD          , (CPUInfo[c_RegEBX] & (1<<28)) != 0);
-    Exts.setExt(eExt::SHA               , (CPUInfo[c_RegEBX] & (1<<29)) != 0);
-    Exts.setExt(eExt::AVX512BW          , (CPUInfo[c_RegEBX] & (1<<30)) != 0);
-    Exts.setExt(eExt::AVX512VL          , (CPUInfo[c_RegEBX] & (1<<31)) != 0);    
-                       
-    //ECX              
-    Exts.setExt(eExt::PREFETCHW         , (CPUInfo[c_RegECX] & (1<< 0)) != 0);
-    Exts.setExt(eExt::AVX512VMBI        , (CPUInfo[c_RegECX] & (1<< 1)) != 0);
-    Exts.setExt(eExt::UMIP              , (CPUInfo[c_RegECX] & (1<< 2)) != 0);
-    //pku              
-    //ospke            
-    //NN               
-    Exts.setExt(eExt::AVX512_VBMI2      , (CPUInfo[c_RegECX] & (1<< 6)) != 0);
-    //NN               
-    Exts.setExt(eExt::GFNI              , (CPUInfo[c_RegECX] & (1<< 8)) != 0);
-    Exts.setExt(eExt::VAES              , (CPUInfo[c_RegECX] & (1<< 9)) != 0);
-    Exts.setExt(eExt::VPCLMULQDQ        , (CPUInfo[c_RegECX] & (1<<10)) != 0);
-    Exts.setExt(eExt::AVX512_VNNI       , (CPUInfo[c_RegECX] & (1<<11)) != 0);
-    Exts.setExt(eExt::AVX512_BITALG     , (CPUInfo[c_RegECX] & (1<<12)) != 0);
-    //NN
-    Exts.setExt(eExt::AVX512_VPOPCNTDQ  , (CPUInfo[c_RegECX] & (1<<14)) != 0);
-    //NN
-    //NN
-    //mawau
-    //mawau
-    //mawau
-    //mawau
-    //mawau
-    Exts.setExt(eExt::RDPID             , (CPUInfo[c_RegECX] & (1<<22)) != 0);
-    //NN
-    //NN
-    //NN
-    //NN
-    //NN
-    //NN
-    //NN
-    //sgx_ic
-    //NN
+    //StandardLevel = 1
+    if(HighestFunctionSupported>=1)
+    {
+      xCPUID(CPUInfo, 1);
+      //EDX
+      Exts.setExt(eExt::FPU               , (CPUInfo[c_RegEDX] & (1<< 0)) != 0);
+      //vme              
+      //de               
+      Exts.setExt(eExt::PSE               , (CPUInfo[c_RegEDX] & (1<< 3)) != 0);
+      Exts.setExt(eExt::TSC               , (CPUInfo[c_RegEDX] & (1<< 4)) != 0);
+      //msr              
+      Exts.setExt(eExt::PAE               , (CPUInfo[c_RegEDX] & (1<< 6)) != 0);
+      //mce              
+      Exts.setExt(eExt::CMPXCHG8B         , (CPUInfo[c_RegEDX] & (1<< 8)) != 0);
+      //apic             
+      //NN               
+      Exts.setExt(eExt::SEP               , (CPUInfo[c_RegEDX] & (1<<11)) != 0);
+      //mtrr             
+      //pge              
+      //mca              
+      Exts.setExt(eExt::CMOV              , (CPUInfo[c_RegEDX] & (1<<15)) != 0);
+      //pat              
+      Exts.setExt(eExt::PSE36             , (CPUInfo[c_RegEDX] & (1<<17)) != 0);
+      //psn              
+      Exts.setExt(eExt::CLFLUSH           , (CPUInfo[c_RegEDX] & (1<<19)) != 0);
+      //NN               
+      //ds               
+      //acpi             
+      Exts.setExt(eExt::MMX               , (CPUInfo[c_RegEDX] & (1<<23)) != 0);
+      Exts.setExt(eExt::FXRS              , (CPUInfo[c_RegEDX] & (1<<24)) != 0);
+      Exts.setExt(eExt::SSE1              , (CPUInfo[c_RegEDX] & (1<<25)) != 0);
+      Exts.setExt(eExt::SSE2              , (CPUInfo[c_RegEDX] & (1<<26)) != 0);
+      //ss               
+      Exts.setExt(eExt::HT                , (CPUInfo[c_RegEDX] & (1<<28)) != 0);
+      //tm               
+      //ia64             
+      //pbe              
+                        
+      //ECX              
+      Exts.setExt(eExt::SSE3              , (CPUInfo[c_RegECX] & (1<< 0)) != 0);
+      Exts.setExt(eExt::CLMUL             , (CPUInfo[c_RegECX] & (1<< 1)) != 0);
+      //dtes64           
+      //monitor          
+      //cr8_legacy       
+      Exts.setExt(eExt::LZCNT             , (CPUInfo[c_RegECX] & (1<< 5)) != 0);
+      Exts.setExt(eExt::SSSE3             , (CPUInfo[c_RegECX] & (1<< 9)) != 0);
+      Exts.setExt(eExt::FMA3              , (CPUInfo[c_RegECX] & (1<<12)) != 0);
+      Exts.setExt(eExt::CMPXCHG16B        , (CPUInfo[c_RegECX] & (1<<13)) != 0);
+      Exts.setExt(eExt::SSE4_1            , (CPUInfo[c_RegECX] & (1<<19)) != 0);
+      Exts.setExt(eExt::SSE4_2            , (CPUInfo[c_RegECX] & (1<<20)) != 0);
+      Exts.setExt(eExt::MOVBE             , (CPUInfo[c_RegECX] & (1<<22)) != 0);
+      Exts.setExt(eExt::POPCNT            , (CPUInfo[c_RegECX] & (1<<23)) != 0);
+      Exts.setExt(eExt::AES               , (CPUInfo[c_RegECX] & (1<<25)) != 0);
+      Exts.setExt(eExt::AVX1              , (CPUInfo[c_RegECX] & (1<<28)) != 0);
+      Exts.setExt(eExt::FP16C             , (CPUInfo[c_RegECX] & (1<<29)) != 0);
+      Exts.setExt(eExt::RDRAND            , (CPUInfo[c_RegECX] & (1<<30)) != 0);
+    }
 
-    //EDX
-    //NN
-    //NN
-    Exts.setExt(eExt::AVX512_4VNNIW       , (CPUInfo[c_RegEDX] & (1<< 2)) != 0);
-    Exts.setExt(eExt::AVX512_4FMAPS       , (CPUInfo[c_RegEDX] & (1<< 3)) != 0);
-    Exts.setExt(eExt::AVX512_BF16         , (CPUInfo[c_RegEDX] & (1<< 5)) != 0);
-    Exts.setExt(eExt::AVX512_VP2INTERSECT , (CPUInfo[c_RegEDX] & (1<< 8)) != 0);
-    Exts.setExt(eExt::HYBRID              , (CPUInfo[c_RegEDX] & (1<<15)) != 0);
-    Exts.setExt(eExt::AMX_BF16            , (CPUInfo[c_RegEDX] & (1<<22)) != 0);
-    Exts.setExt(eExt::AVX512_FP16         , (CPUInfo[c_RegEDX] & (1<<23)) != 0);
-    Exts.setExt(eExt::AMX_TILE            , (CPUInfo[c_RegEDX] & (1<<24)) != 0);
-    Exts.setExt(eExt::AMX_INT8            , (CPUInfo[c_RegEDX] & (1<<25)) != 0);    
-  }
+    //StandardLevel , 7
+    if(HighestFunctionSupported>=7)
+    {
+      xCPUID(CPUInfo, 7);    
+      //EBX
+      //fsgsbase
+      Exts.setExt(eExt::SGX               , (CPUInfo[c_RegEBX] & (1<< 2)) != 0);
+      Exts.setExt(eExt::BMI1              , (CPUInfo[c_RegEBX] & (1<< 3)) != 0);
+      Exts.setExt(eExt::HLE               , (CPUInfo[c_RegEBX] & (1<< 4)) != 0);
+      Exts.setExt(eExt::AVX2              , (CPUInfo[c_RegEBX] & (1<< 5)) != 0);
+      //NN                
+      //smep             
+      Exts.setExt(eExt::BMI2              , (CPUInfo[c_RegEBX] & (1<< 8)) != 0);
+      //erms             
+      Exts.setExt(eExt::INVPCID           , (CPUInfo[c_RegEBX] & (1<<10)) != 0);
+      Exts.setExt(eExt::RTM               , (CPUInfo[c_RegEBX] & (1<<11)) != 0);
+      //pqm              
+      //NN                
+      Exts.setExt(eExt::MPX               , (CPUInfo[c_RegEBX] & (1<<14)) != 0);
+      //pqe              
+      Exts.setExt(eExt::AVX512F           , (CPUInfo[c_RegEBX] & (1<<16)) != 0);
+      Exts.setExt(eExt::AVX512DQ          , (CPUInfo[c_RegEBX] & (1<<17)) != 0);
+      Exts.setExt(eExt::RDSEED            , (CPUInfo[c_RegEBX] & (1<<18)) != 0);
+      Exts.setExt(eExt::ADX               , (CPUInfo[c_RegEBX] & (1<<19)) != 0);
+      //smap             
+      Exts.setExt(eExt::AVX512IFMA        , (CPUInfo[c_RegEBX] & (1<<21)) != 0);
+      //pcommit
+      //clflushopt
+      Exts.setExt(eExt::CLWB              , (CPUInfo[c_RegEBX] & (1<<24)) != 0);
+      //intel_pt         
+      Exts.setExt(eExt::AVX512PF          , (CPUInfo[c_RegEBX] & (1<<26)) != 0);
+      Exts.setExt(eExt::AVX512ER          , (CPUInfo[c_RegEBX] & (1<<27)) != 0);
+      Exts.setExt(eExt::AVX512CD          , (CPUInfo[c_RegEBX] & (1<<28)) != 0);
+      Exts.setExt(eExt::SHA               , (CPUInfo[c_RegEBX] & (1<<29)) != 0);
+      Exts.setExt(eExt::AVX512BW          , (CPUInfo[c_RegEBX] & (1<<30)) != 0);
+      Exts.setExt(eExt::AVX512VL          , (CPUInfo[c_RegEBX] & (1<<31)) != 0);    
+                        
+      //ECX              
+      Exts.setExt(eExt::PREFETCHW         , (CPUInfo[c_RegECX] & (1<< 0)) != 0);
+      Exts.setExt(eExt::AVX512VMBI        , (CPUInfo[c_RegECX] & (1<< 1)) != 0);
+      Exts.setExt(eExt::UMIP              , (CPUInfo[c_RegECX] & (1<< 2)) != 0);
+      //pku              
+      //ospke            
+      //NN               
+      Exts.setExt(eExt::AVX512_VBMI2      , (CPUInfo[c_RegECX] & (1<< 6)) != 0);
+      //NN               
+      Exts.setExt(eExt::GFNI              , (CPUInfo[c_RegECX] & (1<< 8)) != 0);
+      Exts.setExt(eExt::VAES              , (CPUInfo[c_RegECX] & (1<< 9)) != 0);
+      Exts.setExt(eExt::VPCLMULQDQ        , (CPUInfo[c_RegECX] & (1<<10)) != 0);
+      Exts.setExt(eExt::AVX512_VNNI       , (CPUInfo[c_RegECX] & (1<<11)) != 0);
+      Exts.setExt(eExt::AVX512_BITALG     , (CPUInfo[c_RegECX] & (1<<12)) != 0);
+      //NN
+      Exts.setExt(eExt::AVX512_VPOPCNTDQ  , (CPUInfo[c_RegECX] & (1<<14)) != 0);
+      //NN
+      //NN
+      //mawau
+      //mawau
+      //mawau
+      //mawau
+      //mawau
+      Exts.setExt(eExt::RDPID             , (CPUInfo[c_RegECX] & (1<<22)) != 0);
+      //NN
+      //NN
+      //NN
+      //NN
+      //NN
+      //NN
+      //NN
+      //sgx_ic
+      //NN
 
-  //StandardLevel = 7
-  if(HighestFunctionSupported>=7)
-  {
-    xCPUID(CPUInfo, 7, 1);
-    // EAX:0 = SHA512
-    // EAX:1 = sm3 
-    // EAX:2 = sm4
-    // rao-int
-    // EAX:3 = avx-vnni
+      //EDX
+      //NN
+      //NN
+      Exts.setExt(eExt::AVX512_4VNNIW       , (CPUInfo[c_RegEDX] & (1<< 2)) != 0);
+      Exts.setExt(eExt::AVX512_4FMAPS       , (CPUInfo[c_RegEDX] & (1<< 3)) != 0);
+      Exts.setExt(eExt::AVX512_BF16         , (CPUInfo[c_RegEDX] & (1<< 5)) != 0);
+      Exts.setExt(eExt::AVX512_VP2INTERSECT , (CPUInfo[c_RegEDX] & (1<< 8)) != 0);
+      Exts.setExt(eExt::HYBRID              , (CPUInfo[c_RegEDX] & (1<<15)) != 0);
+      Exts.setExt(eExt::AMX_BF16            , (CPUInfo[c_RegEDX] & (1<<22)) != 0);
+      Exts.setExt(eExt::AVX512_FP16         , (CPUInfo[c_RegEDX] & (1<<23)) != 0);
+      Exts.setExt(eExt::AMX_TILE            , (CPUInfo[c_RegEDX] & (1<<24)) != 0);
+      Exts.setExt(eExt::AMX_INT8            , (CPUInfo[c_RegEDX] & (1<<25)) != 0);    
+    }
+
+    //StandardLevel = 7
+    if(HighestFunctionSupported>=7)
+    {
+      xCPUID(CPUInfo, 7, 1);
+      // EAX:0 = SHA512
+      // EAX:1 = sm3 
+      // EAX:2 = sm4
+      // rao-int
+      // EAX:3 = avx-vnni
+      
+    }
     
-  }
-  
 
-  //derrived
-  Exts.setExt(eExt::LZCNT       , Exts.hasExt(eExt::BMI1));
-  Exts.setExt(eExt::ABM         , Exts.hasExt(eExt::LZCNT) && Exts.hasExt(eExt::POPCNT));
-  Exts.setExt(eExt::TSX         , Exts.hasExt(eExt::RTM  ) && Exts.hasExt(eExt::HLE   ));
-  
-  //ExtendedStandardLevel = 0x80000000
-  xCPUID(CPUInfo, 0x80000000);
-  unsigned int HighestExtendedFunctionSupported = CPUInfo[0];
+    //derrived
+    Exts.setExt(eExt::LZCNT       , Exts.hasExt(eExt::BMI1));
+    Exts.setExt(eExt::ABM         , Exts.hasExt(eExt::LZCNT) && Exts.hasExt(eExt::POPCNT));
+    Exts.setExt(eExt::TSX         , Exts.hasExt(eExt::RTM  ) && Exts.hasExt(eExt::HLE   ));
+    
+    //ExtendedStandardLevel = 0x80000000
+    xCPUID(CPUInfo, 0x80000000);
+    unsigned int HighestExtendedFunctionSupported = CPUInfo[0];
 
-  //ExtendedStandardLevel = 0x80000001
-  if(HighestExtendedFunctionSupported>=0x80000001)
-  {
-    xCPUID(CPUInfo, 0x80000001);
-    Exts.setExt(eExt::LAHF_SAHF    , (CPUInfo[c_RegECX] & (1<< 0)) != 0);
-    Exts.setExt(eExt::SSE4_A       , (CPUInfo[c_RegECX] & (1<< 6)) != 0);
-    Exts.setExt(eExt::SSE_XOP      , (CPUInfo[c_RegECX] & (1<<11)) != 0);
-    Exts.setExt(eExt::FMA4         , (CPUInfo[c_RegECX] & (1<<16)) != 0);
-    Exts.setExt(eExt::TBM          , (CPUInfo[c_RegECX] & (1<<21)) != 0);
-    Exts.setExt(eExt::MMX_3DNow    , (CPUInfo[c_RegEDX] & (1<<31)) != 0);
-    Exts.setExt(eExt::MMX_3DNowExt , (CPUInfo[c_RegEDX] & (1<<30)) != 0);
-  }
-
+    //ExtendedStandardLevel = 0x80000001
+    if(HighestExtendedFunctionSupported>=0x80000001)
+    {
+      xCPUID(CPUInfo, 0x80000001);
+      Exts.setExt(eExt::LAHF_SAHF    , (CPUInfo[c_RegECX] & (1<< 0)) != 0);
+      Exts.setExt(eExt::SSE4_A       , (CPUInfo[c_RegECX] & (1<< 6)) != 0);
+      Exts.setExt(eExt::SSE_XOP      , (CPUInfo[c_RegECX] & (1<<11)) != 0);
+      Exts.setExt(eExt::FMA4         , (CPUInfo[c_RegECX] & (1<<16)) != 0);
+      Exts.setExt(eExt::TBM          , (CPUInfo[c_RegECX] & (1<<21)) != 0);
+      Exts.setExt(eExt::MMX_3DNow    , (CPUInfo[c_RegEDX] & (1<<31)) != 0);
+      Exts.setExt(eExt::MMX_3DNowExt , (CPUInfo[c_RegEDX] & (1<<30)) != 0);
+    }
+  #endif
   return Exts;
 }
 
-bool xProcInfo::xDetectOSAVX()
-{ 
-  return (xXGETBV(0) & 6) == 6; //AVX enabled in O.S.
-}
-
+#if X_ARCHITECTURE_AMD64
+  bool xProcInfo::xDetectOSAVX()
+  { 
+    return (xXGETBV(0) & 6) == 6; //AVX enabled in O.S.
+  }
+#endif
 //=============================================================================================================================================================================
 
 } //end of namespace PMBB

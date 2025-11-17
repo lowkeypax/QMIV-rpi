@@ -87,11 +87,18 @@
   #if defined (__x86_64__)
     #define X_ARCHITECTURE_AMD64 1
   #endif
+  #if defined (__aarch64__)
+    #define X_ARCHITECTURE_ARM64 1
+  #endif
 #endif
 
 #ifndef X_ARCHITECTURE_AMD64
 #define X_ARCHITECTURE_AMD64 0
-#endif // !X_ARCHITECTURE_AMD64
+#endif
+#ifndef X_ARCHITECTURE_ARM64
+#define X_ARCHITECTURE_ARM64 0
+#endif 
+// !X_ARCHITECTURE_AMD64 || !X_ARCHITECTURE_ARM64
 
 //=============================================================================================================================================================================
 // language version
